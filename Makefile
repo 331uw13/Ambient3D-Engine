@@ -1,0 +1,38 @@
+FLAGS = -std=c++20 -ggdb -Wall -Wextra -Wno-missing-field-initializers -Wno-switch 
+CXX = g++
+
+TARGET_NAME = ambient3d
+
+SRC  = $(shell find ./src -type f -name *.cpp)
+SRC += $(shell find ./shared -type f -name *.cpp)
+
+
+RAYLIB_PATH = "./raylib/build/raylib_modified/"
+RAYLIB_HEADERS = "./raylib/src"
+AMBIENT3D_SHARED = ./shared
+
+
+LIBS = -L$(RAYLIB_PATH) -Wl,-rpath,$(RAYLIB_PATH) -lraylib_modified \
+	   -lGL -lm -lpthread -ldl -lrt -lX11 -ljsoncpp -llz4
+
+OBJS = $(SRC:.cpp=.o)
+
+
+all: $(TARGET_NAME)
+
+
+%.o: %.cpp
+	@$(CXX) $(FLAGS) $(LIBS) \
+		-I$(AMBIENT3D_SHARED) \
+		-I$(RAYLIB_HEADERS) \
+		-c $< -o $@ && (echo -e "\033[32m[Compiled]\033[0m $<") || (echo -e "\033[31m[Failed]\033[0m $<"; exit 1) 
+
+$(TARGET_NAME): $(OBJS)
+	@echo -e "\033[90mLinking...\033[0m"
+	@$(CXX) $(OBJS) -o $@ $(LIBS) && (echo -e "\033[36mDone.\033[0m"; ls -lh $(TARGET_NAME))
+
+clean:
+	@rm $(OBJS) $(TARGET_NAME) 2> /dev/null
+
+.PHONY: all clean
+

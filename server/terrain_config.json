@@ -1,0 +1,20 @@
+{
+    "base_frq": 0.4,
+    "base_amp": 20.0,
+    "base_alt": 0.5,
+    "base_detail_frq": 1.5,
+    "base_detail_amp": 6.0,
+    "base_detail_alt": 0.8,
+
+    "fields_frq": 0.02,
+    "fields_amp": 0.1,
+
+    "mountain_frq": 0.05,
+    "mountain_amp": 300,
+    "mountain_alt": 0.01,
+    "mountain_iterations": 3.0,
+    "mountain_iteration_frq_add": 0.1,
+    "mountain_iteration_amp_add": -40.0,
+    "mountain_iteration_alt_add": 0.0
+
+}

@@ -1,6 +1,7 @@
 # Ambient3D
 
 ### 3D Game engine built on top of raylib and ASIO
+> Written in C++20
 
 * https://www.raylib.com/
 * https://think-async.com/Asio/

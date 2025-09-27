@@ -4,7 +4,7 @@
 
 * https://www.raylib.com/
 * https://think-async.com/Asio/
-
+* https://github.com/nlohmann/json
 
 ```
 The idea is to create easy to use cross-platform 3D game engine library.

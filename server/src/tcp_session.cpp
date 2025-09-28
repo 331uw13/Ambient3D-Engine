@@ -59,8 +59,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
         case AM::PacketID::PLAYER_CONNECTED:
             {    
                 // Respond by sending item list.
-                AM::packet_prepare(&this->packet, AM::PacketID::SAVE_ITEM_LIST);
-                AM::packet_write_string(&this->packet, m_server->item_list.dump());
+                this->packet.prepare(AM::PacketID::SAVE_ITEM_LIST);
+                this->packet.write_string({ m_server->item_list.dump() });
                 this->send_packet();    
             }
             break;
@@ -70,8 +70,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                 // ***********************************************
                 // TODO: Remove filepaths before sending to client.
                 // ***********************************************
-                AM::packet_prepare(&this->packet, AM::PacketID::SERVER_CONFIG);
-                AM::packet_write_string(&this->packet, m_server->config.json_data.c_str());
+                this->packet.prepare(AM::PacketID::SERVER_CONFIG);
+                this->packet.write_string({ m_server->config.json_data });
                 this->send_packet(); 
             }
             break;
@@ -147,10 +147,7 @@ void AM::TCP_session::m_do_read() {
 
 
 void AM::TCP_session::send_packet() {
-
-    if(this->packet.status != AM::PacketStatus::HAS_DATA) {
-        fprintf(stderr, "%s: Packet doesnt seem to have any data to be sent.\n",
-                __func__);
+    if((this->packet.get_flags() & AM::Packet::FLG_WRITE_ERROR)) {
         return;
     }
 
@@ -163,6 +160,8 @@ void AM::TCP_session::send_packet() {
                     return;
                 }
             });
+    
+    this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
 }
 
 

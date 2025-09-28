@@ -47,13 +47,17 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
 
         // Now send the received player id via UDP
         // so the server can save the endpoint.
-        AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_ID);
-        AM::packet_write_int(&this->packet, { this->player_id });
+        //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_ID);
+        //AM::packet_write_int(&this->packet, { this->player_id });
+        this->packet.prepare(AM::PacketID::PLAYER_ID);
+        this->packet.write<int>({ this->player_id });
         this->send_packet(AM::NetProto::UDP);
         
         // Tell server client connected successfully.
-        AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_CONNECTED);
-        AM::packet_write_int(&this->packet, { this->player_id });
+        //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_CONNECTED);
+        //AM::packet_write_int(&this->packet, { this->player_id });
+        this->packet.prepare(AM::PacketID::PLAYER_CONNECTED);
+        this->packet.write<int>({ this->player_id });
         this->send_packet(AM::NetProto::TCP); 
     });
    
@@ -73,9 +77,13 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     [this](float interval_ms, char* data, size_t sizeb) {
         (void)sizeb;
         printf("[NETWORK]: Received server item list.\n");
+        printf("%s\n", data);
         m_engine->item_manager.set_item_list(json::parse(data));
-        AM::packet_prepare(&this->packet, AM::PacketID::GET_SERVER_CONFIG);
+        
+        this->packet.prepare(AM::PacketID::GET_SERVER_CONFIG);
         this->send_packet(AM::NetProto::TCP);
+        //AM::packet_prepare(&this->packet, AM::PacketID::GET_SERVER_CONFIG);
+        //this->send_packet(AM::NetProto::TCP);
     });
     
 
@@ -88,7 +96,8 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         this->server_cfg.parse_from_memory(json::parse(data));
         m_engine->item_manager.set_server_config(this->server_cfg);
 
-        AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_FULLY_CONNECTED);
+        //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_FULLY_CONNECTED);
+        this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
         this->send_packet(AM::NetProto::TCP);
         
         // The regenbuf will not be allocated if it already is.
@@ -249,6 +258,9 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
 
         size_t byte_offset = sizeof(player_id);
         
+        memmove(&player.anim_id, &data[byte_offset], sizeof(int));
+        byte_offset += sizeof(int);
+        
         memmove(&player.pos, &data[byte_offset], sizeof(float)*3);
         byte_offset += sizeof(float)*3;
 
@@ -256,10 +268,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         byte_offset += sizeof(float);
         
         memmove(&player.cam_pitch, &data[byte_offset], sizeof(float));
-        byte_offset += sizeof(float);
-
-        memmove(&player.anim_id, &data[byte_offset], sizeof(int));
-        //offset += sizeof(int);
+        //byte_offset += sizeof(float);
 
         // Insert player data if not in hashmap
         // or replace existing one.
@@ -338,6 +347,7 @@ AM::Network::Network(asio::io_context& io_context, const NetConnectCFG& cfg)
     }
 
     try {
+        this->packet.allocate_memory();
         m_msg_recv_callback = cfg.msg_recv_callback;
 
         asio::ip::tcp::resolver tcp_resolver(io_context);
@@ -372,6 +382,7 @@ void AM::Network::close(asio::io_context& io_context) {
     io_context.stop();
     m_event_handler_th.join();
     m_connected = false;
+    this->packet.free_memory();
 }
 
 
@@ -437,6 +448,8 @@ void AM::Network::m_do_write_tcp() {
                     return;
                 }               
             });
+    
+    this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
 }
 
 
@@ -454,6 +467,8 @@ void AM::Network::m_do_write_udp() {
                     return;
                 }
             });
+    
+    this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
 }
 
  

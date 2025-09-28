@@ -26,7 +26,13 @@ AM::Server::Server(asio::io_context& context, const AM::ServerCFG& cfg) :
 }
         
 AM::Server::~Server() {
+    m_udp_handler.packet.free_memory();
     m_chunkdata_buf.free_memory();
+    
+    for(auto player_it = this->players.begin(); player_it != this->players.end(); ++player_it) {
+        player_it->second.tcp_session->packet.free_memory();
+    }
+
     printf("Server closed.\n");
 }
 
@@ -66,6 +72,7 @@ void AM::Server::start(asio::io_context& io_context) {
     m_chunkdata_buf.allocate(1024 * 1024);
     m_read_terrain_config();
 
+    m_udp_handler.packet.allocate_memory();
     m_udp_handler.start(this);
     m_do_accept_TCP();
 
@@ -113,9 +120,14 @@ void AM::Server::remove_player(int player_id) {
     this->players_mutex.lock();
 
     const auto search = this->players.find(player_id);
-    if(search != this->players.end()) {
-        this->players.erase(search);
+    if(search == this->players.end()) {
+        fprintf(stderr, "ERROR! %s: Trying to remove player id (%i). But it doesnt exist.\n",
+                __func__, player_id);
+        return;
     }
+        
+    search->second.tcp_session->packet.free_memory();
+    this->players.erase(search);
 
     this->players_mutex.unlock();
 
@@ -146,10 +158,11 @@ void AM::Server::m_do_accept_TCP() {
                 this->players.insert(std::make_pair(player_id, player));
                 this->players_mutex.unlock();
 
+                player.tcp_session->packet.allocate_memory();
                 player.tcp_session->start();
                 
-                AM::packet_prepare  (&player.tcp_session->packet, AM::PacketID::PLAYER_ID);
-                AM::packet_write_int(&player.tcp_session->packet, { player_id });
+                player.tcp_session->packet.prepare(AM::PacketID::PLAYER_ID);
+                player.tcp_session->packet.write<int>({ player_id });
                 player.tcp_session->send_packet();
 
                 m_do_accept_TCP();
@@ -176,8 +189,8 @@ void AM::Server::broadcast_msg(AM::PacketID packet_id, const std::string& msg) {
 
     for(auto it = this->players.begin(); it != this->players.end(); ++it) {
         Player* p = &it->second;
-        AM::packet_prepare(&p->tcp_session->packet, packet_id);
-        AM::packet_write_string(&p->tcp_session->packet, msg);
+        p->tcp_session->packet.prepare(packet_id);
+        p->tcp_session->packet.write_string({ msg });
         p->tcp_session->send_packet();
     }
 
@@ -198,21 +211,31 @@ void AM::Server::m_send_player_position(AM::Player* player) {
 
     player->pos.y = player->terrain_surface_y + this->config.player_cam_height;
 
-    AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::PLAYER_POSITION);
-    AM::packet_write_int(&m_udp_handler.packet, { 
+    m_udp_handler.packet.prepare(AM::PacketID::PLAYER_POSITION);
+    m_udp_handler.packet.write<int>({
             on_ground,
             player_chunk_pos.x,
-            player_chunk_pos.z
+            player_chunk_pos.z,
+            player->pos_xz_updated
     });
-    AM::packet_write_int(&m_udp_handler.packet, { player->pos_xz_axis_updated });
-    AM::packet_write_float(&m_udp_handler.packet, { player->pos.y });
-    if(player->pos_xz_axis_updated) {
-        AM::packet_write_float(&m_udp_handler.packet, { player->pos.x, player->pos.z });
-        player->pos_xz_axis_updated = false;
+
+    if(player->pos_xz_updated) {
+        m_udp_handler.packet.write<float>({
+                player->pos.x,
+                player->pos.y,
+                player->pos.z
+        });
+        player->pos_xz_updated = false;
     }
+    else {
+        m_udp_handler.packet.write<float>({
+                player->pos.y,
+        });
+    }
+
     m_udp_handler.send_packet(player->id);
 }
-            
+ 
 
 void AM::Server::m_send_player_updates() {
     this->players_mutex.lock();
@@ -235,16 +258,15 @@ void AM::Server::m_send_player_updates() {
             const Player* p = &itB->second;
             if(p->id == player->id) { continue; }
 
-            AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
-            AM::packet_write_int(&m_udp_handler.packet, { player->id });
-            AM::packet_write_float(&m_udp_handler.packet, {
-                        player->pos.x,
-                        player->pos.y,
-                        player->pos.z,
-                        player->cam_yaw,
-                        player->cam_pitch
-                    });
-            AM::packet_write_int(&m_udp_handler.packet, { player->anim_id });
+            m_udp_handler.packet.prepare(AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
+            m_udp_handler.packet.write<int>({ player->id, player->anim_id });
+            m_udp_handler.packet.write<float>({
+                    player->pos.x,
+                    player->pos.y,
+                    player->pos.z,
+                    player->cam_yaw,
+                    player->cam_pitch
+            });
 
             m_udp_handler.send_packet(p->id);
         }
@@ -269,7 +291,7 @@ void AM::Server::m_send_item_updates() {
             continue;
         }
 
-        AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::ITEM_UPDATE);
+        m_udp_handler.packet.prepare(AM::PacketID::ITEM_UPDATE);
         uint32_t num_items_nearby = 0;
 
         for(auto item_it = this->dropped_items.begin(); 
@@ -281,17 +303,18 @@ void AM::Server::m_send_item_updates() {
                 continue; // Too far away to care.
             }
 
-            AM::packet_write_int(&m_udp_handler.packet, {
+            m_udp_handler.packet.write<int>({
                     item->uuid,
                     item->id
             });
-            AM::packet_write_float(&m_udp_handler.packet, {
+            m_udp_handler.packet.write<float>({
                     item->pos_x,
                     item->pos_y,
                     item->pos_z
             });
-            AM::packet_write_string(&m_udp_handler.packet, item->entry_name);
-            AM::packet_write_separator(&m_udp_handler.packet);
+
+            m_udp_handler.packet.write_string({ item->entry_name });
+            m_udp_handler.packet.write_separator();
             
             num_items_nearby++;
         }
@@ -320,8 +343,7 @@ void AM::Server::m_send_player_chunk_updates() {
         }
 
 
-
-        AM::packet_prepare(&m_udp_handler.packet, AM::PacketID::CHUNK_DATA);
+        m_udp_handler.packet.prepare(AM::PacketID::CHUNK_DATA);
         size_t num_chunks = 0;
        
         chunk_positions.clear();
@@ -377,6 +399,7 @@ void AM::Server::m_send_player_chunk_updates() {
                 player->loaded_chunks.erase(chunk_pos);
             }
 
+            m_udp_handler.packet.enable_flag(AM::Packet::FLG_COMPLETE);
             continue;
         }
 
@@ -385,7 +408,6 @@ void AM::Server::m_send_player_chunk_updates() {
                 (float)compressed_size / 1000.0f, 
                 player->id
                 );
-        m_udp_handler.packet.status = AM::PacketStatus::HAS_DATA;
         m_udp_handler.packet.size = compressed_size + sizeof(AM::PacketID);
         m_udp_handler.send_packet(player->id);
     }
@@ -398,8 +420,8 @@ void AM::Server::m_process_resend_id_queue() {
     this->players_mutex.lock();
     for(int player_id : this->resend_player_id_queue) {
         AM::Player* player = this->get_player_by_id(player_id);
-        AM::packet_prepare  (&player->tcp_session->packet, AM::PacketID::PLAYER_ID);
-        AM::packet_write_int(&player->tcp_session->packet, { player_id });
+        player->tcp_session->packet.prepare(AM::PacketID::PLAYER_ID);
+        player->tcp_session->packet.write<int>({ player_id });
         player->tcp_session->send_packet();
     }
     this->players_mutex.unlock();
@@ -451,7 +473,6 @@ void AM::Server::m_worldgen_th__func() {
                     //printf("[WORLD_GEN]: ChunkPos = (%i, %i)\n", chunk_pos.x, chunk_pos.z);
                 }
             });
-            
         }
         
         this->terrain.chunk_map_mutex.unlock();

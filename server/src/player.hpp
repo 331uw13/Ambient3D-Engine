@@ -25,7 +25,7 @@ namespace AM {
             float  cam_pitch    { 0 };
             int    anim_id      { 0 };
             bool   on_ground    { true };
-            bool   pos_xz_axis_updated { false };
+            bool   pos_xz_updated { false };
 
             float terrain_surface_y { 0 };
             void update_gravity(float gravity);

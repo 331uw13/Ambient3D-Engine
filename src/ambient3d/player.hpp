@@ -101,7 +101,7 @@ namespace AM {
             Vector3 m_camera_forward { 0.0f, 0.0f, 0.0f };
             float m_movement_friction { 0.97f };   // TODO: Get this from server.
             float m_walking_speed { 30.0f };      // TODO: Get this from server.
-            float m_running_speed { 80.0f };      // TODO: Get this from server.
+            float m_running_speed { 200.0f };      // TODO: Get this from server.
             float m_current_move_speed { 0.0f };
             AM::AnimID m_animation_id { AM::AnimID::IDLE };
             void m_update_Y_axis_position();

@@ -124,12 +124,12 @@ namespace AM {
         // ---------------------------------
         // 0            :  Packet ID        (int)
         // 4            :  Player ID        (int)
-        // 8            :  Player pos X     (float)
-        // 12           :  Player pos Y     (float)
-        // 16           :  Player pos Z     (float)
-        // 20           :  Camera Yaw       (float)
-        // 24           :  Camera Pitch     (float)
-        // 28           :  Animation ID     (int)
+        // 8            :  Animation ID     (int)
+        // 12           :  Player pos X     (float)
+        // 16           :  Player pos Y     (float)
+        // 20           :  Player pos Z     (float)
+        // 24           :  Camera Yaw       (float)
+        // 28           :  Camera Pitch     (float)
         PLAYER_MOVEMENT_AND_CAMERA, // (udp only)
 
         // Server is going to send player their position.

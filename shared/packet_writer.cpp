@@ -1,75 +1,129 @@
 #include <cstdio>
 #include <cstring>
+#include <chrono>
+#include <iostream>
 
 #include "packet_writer.hpp"
 
 
-static bool _write_bytes(AM::Packet* packet, void* data, size_t data_sizeb) { 
+void AM::Packet::allocate_memory() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_flags |= FLG_COMPLETE;
     
-    if(packet->size + data_sizeb >= AM::MAX_PACKET_SIZE) {
-        fprintf(stderr, "ERROR! %s: Packet cant hold more data than %li bytes.\n",
-                __func__, AM::MAX_PACKET_SIZE);
+    if(this->data) {
+        fprintf(stderr, "ERROR! Trying to allocate memory for packet data. "
+                "But it already has address of: %p\n", this->data);
+        return;
+    }
+    this->data = new char[AM::MAX_PACKET_SIZE];
+    if(!this->data) {
+        fprintf(stderr, "ERROR! Failed to allocate %li bytes of memory for packet data array.\n",
+                AM::MAX_PACKET_SIZE);
+        return;
+    }
+}
+
+void AM::Packet::free_memory() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if(this->data) {
+        delete[] this->data;
+        this->data = NULL;
+    }
+}
+
+void AM::Packet::enable_flag(int flag) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_flags |= flag;
+}
+
+void AM::Packet::disable_flag(int flag) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_flags &= ~flag;
+}
+            
+int AM::Packet::get_flags() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_flags;
+}
+
+// Clears previous data and writes the packet id.
+// And m_has_write_error is set to false.
+void AM::Packet::prepare(AM::PacketID packet_id) {
+    //std::lock_guard<std::mutex> lock(m_mutex);
+    m_mutex.lock();
+
+    const std::thread::id this_thread_id = std::this_thread::get_id();
+
+    if(!(m_flags & FLG_COMPLETE) 
+    && !(m_flags & FLG_WRITE_ERROR)
+    && ((this->size > sizeof(AM::PacketID)) || (this->size == 0))
+    && (m_current_thread_id != this_thread_id))
+    {
+        m_mutex.unlock();
+        printf("WARNING! %s() at \"%s\": Waiting until another thread finishes writing...\n",
+                __func__, __FILE__);
+        
+        while(true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            m_mutex.lock();
+            if(!(m_flags & FLG_COMPLETE)) {
+                m_mutex.unlock();
+                continue;
+            }
+            break;
+        }
+    }
+
+    if(packet_id >= AM::PacketID::NUM_PACKETS) {
+        fprintf(stderr, "ERROR! %s: Cant prepare packet with invalid packet id (%i)\n",
+                __func__, packet_id);
+        m_mutex.unlock();
+        return;
+    }
+
+    m_flags = 0;
+    m_current_thread_id = this_thread_id;
+    memset(this->data, 0, (this->size < AM::MAX_PACKET_SIZE) ? this->size : AM::MAX_PACKET_SIZE);
+    this->size = 0;
+
+    memmove(this->data, &packet_id, sizeof(AM::PacketID));
+    this->size += sizeof(AM::PacketID);
+        
+    m_mutex.unlock();
+}
+            
+
+bool AM::Packet::write_bytes(void* data, size_t sizeb) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if((m_flags & FLG_WRITE_ERROR)) {
+        fprintf(stderr, "ERROR! %s: Cant write to current packet anymore."
+                " It seems it experienced a write error. Maybe too much data?\n",
+                __func__);
         return false;
     }
 
-    memmove(packet->data + packet->size,
-            data,
-            data_sizeb);
-    packet->size += data_sizeb;
+    if((this->size + sizeb) >= AM::MAX_PACKET_SIZE) {
+        fprintf(stderr, "ERROR! %s: Packet cant hold more data than %li bytes.\n",
+                __func__, AM::MAX_PACKET_SIZE);
+        m_flags |= AM::Packet::FLG_WRITE_ERROR;
+        return false;
+    }
 
+    memmove(this->data + this->size, data, sizeb);
+    this->size += sizeb;
     return true;
 }
 
-void AM::packet_prepare(AM::Packet* packet, AM::PacketID packet_id) {
-    memset(packet->data, 0, AM::MAX_PACKET_SIZE);
-    packet->size = 0;
-    memmove(packet->data, &packet_id, sizeof(AM::PacketID));
-    packet->size += sizeof(AM::PacketID);
-    packet->status = AM::PacketStatus::PREPARED;
+bool AM::Packet::write_separator() {
+    return this->write_bytes((void*)&AM::PACKET_DATA_SEPARATOR, sizeof(AM::PACKET_DATA_SEPARATOR));
 }
-    
-void AM::packet_write(Packet* packet, void* data, size_t size) {
-    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
-    if(!_write_bytes(packet, data, size)) {
-        return;
-    }
-    packet->status = AM::PacketStatus::HAS_DATA;   
-}
-
-void AM::packet_write_string(AM::Packet* packet, const std::string& str) {
-    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
-    if(!_write_bytes(packet, (void*)&str[0], str.size())) {
-        return;
-    }
-    packet->status = AM::PacketStatus::HAS_DATA;
-}
-
-void AM::packet_write_int(AM::Packet* packet, std::initializer_list<int> list) {
-    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
+            
+bool AM::Packet::write_string(std::initializer_list<std::string> list) {
     for(auto it = list.begin(); it != list.end(); ++it) {
-        if(!_write_bytes(packet, (void*)it, sizeof(int))) {
-            return;
+        if(!write_bytes((void*)it->data(), it->size())) {
+            return false;
         }
     }
-    packet->status = AM::PacketStatus::HAS_DATA;
+    return true;
 }
-
-void AM::packet_write_float(AM::Packet* packet, std::initializer_list<float> list) {
-    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
-    for(auto it = list.begin(); it != list.end(); ++it) {
-        if(!_write_bytes(packet, (void*)it, sizeof(float))) {
-            return;
-        }
-    }
-    packet->status = AM::PacketStatus::HAS_DATA;
-}
-
-void AM::packet_write_separator(AM::Packet* packet) {
-    if(packet->status == AM::PacketStatus::NOT_PREPARED) { return; }
-    if(!_write_bytes(packet, (void*)&AM::PACKET_DATA_SEPARATOR, sizeof(AM::PACKET_DATA_SEPARATOR))) {
-        return;
-    }
-    packet->status = AM::PacketStatus::HAS_DATA;
-}
-
 

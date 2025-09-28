@@ -44,8 +44,9 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
                     m_recv_endpoints.insert(std::make_pair(player_id, m_sender_endpoint));
                 }
 
-                AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
-                AM::packet_write_int(&player->tcp_session->packet, { 1 });
+                //AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
+                //AM::packet_write_int(&player->tcp_session->packet, { 1 });
+                player->tcp_session->packet.prepare(AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
                 player->tcp_session->send_packet();
                 m_server->players_mutex.unlock();
             }
@@ -69,6 +70,9 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
 
                 size_t offset = sizeof(player_id);
                 
+                memmove(&player->anim_id, m_data+offset, sizeof(int));
+                offset += sizeof(int);
+                
                 memmove(&player->pos, m_data+offset, sizeof(float)*3);
                 offset += sizeof(float)*3;
 
@@ -76,10 +80,8 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
                 offset += sizeof(float);
                 
                 memmove(&player->cam_pitch, m_data+offset, sizeof(float));
-                offset += sizeof(float);
+                //offset += sizeof(float);
 
-                memmove(&player->anim_id, m_data+offset, sizeof(int));
-                //offset += sizeof(int);
 
             }
             break;
@@ -105,6 +107,9 @@ void AM::UDP_handler::m_do_read() {
 
 
 void AM::UDP_handler::send_packet(int player_id) {
+    if((this->packet.get_flags() & AM::Packet::FLG_WRITE_ERROR)) {
+        return;
+    }
 
     const auto endpoint = m_recv_endpoints.find(player_id);
     if(endpoint == m_recv_endpoints.end()) {
@@ -114,6 +119,7 @@ void AM::UDP_handler::send_packet(int player_id) {
         // Add player id to queue for trying to send player id to client again
         // so the client will be connected.
         m_server->resend_player_id_queue.push_back(player_id);
+        this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
         return;
     } 
 
@@ -125,6 +131,8 @@ void AM::UDP_handler::send_packet(int player_id) {
                     return;
                 }
             });
+
+    this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
 }
 
 

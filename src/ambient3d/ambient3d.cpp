@@ -417,17 +417,15 @@ void AM::State::m_fast_fixed_tick_update() {
 
         this->terrain.update_chunkdata_queue();
 
-
-        AM::packet_prepare(&this->net->packet, AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
-        AM::packet_write_int(&this->net->packet, { this->net->player_id });
-        AM::packet_write_float(&this->net->packet, {
-                    player_pos.x,
-                    player_pos.y,
-                    player_pos.z,
-                    this->player.camera_yaw(),
-                    this->player.camera_pitch()
-                });
-        AM::packet_write_int(&this->net->packet, { this->player.animation_id() });
+        this->net->packet.prepare(AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
+        this->net->packet.write<int>({ this->net->player_id, this->player.animation_id() });
+        this->net->packet.write<float>({
+                player_pos.x,
+                player_pos.y,
+                player_pos.z,
+                this->player.camera_yaw(),
+                this->player.camera_pitch()
+        });
         this->net->send_packet(AM::NetProto::UDP);
 
         // Callback to user if needed.
@@ -446,14 +444,17 @@ void AM::State::m_slow_fixed_tick_update() {
         // This should be optimized a bit in the future 
         // but doesnt matter right now because this code runs only about every 6 seconds.
 
-        std::vector<AM::ChunkPos> unloaded_chunk_positions;
-
         printf("SLOW TICK!\n");
+        std::vector<AM::ChunkPos> unloaded_chunk_positions;
+        AM::ChunkPos player_chunk_pos = this->player.chunk_pos();
+
+        printf("%i, %i\n", player_chunk_pos.x, player_chunk_pos.z);
+
         for(auto chunk_it = this->terrain.chunk_map.begin();
                 chunk_it != this->terrain.chunk_map.end(); ) {
             AM::Chunk* chunk = &chunk_it->second;
             
-            if(chunk->pos.distance(this->player.chunk_pos()) > this->config.render_distance) {
+            if(chunk->pos.distance(player_chunk_pos) > this->config.render_distance) {
                 chunk->unload();
             }
 
@@ -469,7 +470,8 @@ void AM::State::m_slow_fixed_tick_update() {
         printf("Num chunks unloaded: %li\n", unloaded_chunk_positions.size());
 
         if(!unloaded_chunk_positions.empty()) {
-            printf("TODO: Send unloaded chunks.\n");
+            
+            //AM::packet_prepare(&this->net->packet, );
         }
 
         // Callback to user if needed.

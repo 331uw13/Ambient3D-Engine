@@ -31,7 +31,7 @@ namespace AM {
     static constexpr float FRICTION_TCONST = 120.0f;
 
     static constexpr float FAST_FIXED_TICK_DELAY_SECONDS = 0.075f;
-    static constexpr float SLOW_FIXED_TICK_DELAY_SECONDS = 4.0f;
+    static constexpr float SLOW_FIXED_TICK_DELAY_SECONDS = 6.0f;
 
     enum ShaderIDX : int {
         DEFAULT,

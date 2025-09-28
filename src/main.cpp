@@ -98,6 +98,7 @@ void main_loop(AM::State* st) {
     AM::Chatbox* chatbox = st->find_gui_module<AM::Chatbox>(AM::GuiModuleID::CHATBOX);
 
 
+
     while(!WindowShouldClose()) {
 
         // TODO: Move these to engine side.
@@ -114,14 +115,40 @@ void main_loop(AM::State* st) {
         
         if(IsKeyPressed(KEY_ENTER)) {
             if(chatbox->has_focus && !chatbox->text_input.empty()) {
+                st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
+                st->net->packet.write<std::string>({ chatbox->text_input });
+                st->net->send_packet(AM::NetProto::TCP);
+                /*
                 AM::packet_prepare(&st->net->packet, AM::PacketID::CHAT_MESSAGE);
                 AM::packet_write_string(&st->net->packet, chatbox->text_input);
                 st->net->send_packet(AM::NetProto::TCP);
-            
+                */
                 chatbox->text_input.clear();
             }
         }
 
+        if(IsKeyPressed(KEY_K)) {
+    
+            std::thread test_th_1([st](){
+                printf("TEST_TRHEAD 1  Preparing packet.\n");
+                st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
+                st->net->packet.write<int>({  123, 23, 2378, 283, 23, 232, 3,2, 3,3,  });
+                st->net->send_packet(AM::NetProto::UDP);
+            });
+
+            std::thread test_th_2([st](){
+                printf("TEST_TRHEAD 2  Preparing packet.\n");
+                st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
+                printf("TEST_THREAD 1  Finished writing.\n");
+                st->net->packet.write<int>({  123, 23 });
+                st->net->send_packet(AM::NetProto::UDP);
+            });
+
+
+            test_th_1.join();
+            test_th_2.join();
+
+        }
 
         (*gst.lightA)->pos = st->player.position();
 

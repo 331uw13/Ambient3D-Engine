@@ -142,15 +142,19 @@ loop_exit:
 }
 
 
-void AM::Terrain::foreach_chunk_nearby(float world_x, float world_z, 
+void AM::Terrain::foreach_chunk_nearby(float world_x, float world_z, int distance,
         std::function<void(const AM::Chunk*, const AM::ChunkPos&)> callback) {
 
     AM::ChunkPos origin_chunk_pos = this->get_chunk_pos(world_x, world_z);
-    
-    const int chunk_size_half = m_server->config.render_distance / 2; 
-    for(int chunk_lZ = -chunk_size_half; chunk_lZ <= chunk_size_half; chunk_lZ++) {
-        for(int chunk_lX = -chunk_size_half; chunk_lX <= chunk_size_half; chunk_lX++) { 
-           
+
+    /*
+    printf("%s: (%i, %i)\n",
+            __func__, origin_chunk_pos.x, origin_chunk_pos.z);
+    */
+
+    const int area_half = distance / 2;
+    for(int chunk_lZ = -area_half; chunk_lZ <= area_half; chunk_lZ++) {
+        for(int chunk_lX = -area_half; chunk_lX <= area_half; chunk_lX++) { 
             AM::ChunkPos chunk_pos {
                 origin_chunk_pos.x + chunk_lX,
                 origin_chunk_pos.z + chunk_lZ

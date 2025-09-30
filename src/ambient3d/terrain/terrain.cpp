@@ -165,4 +165,21 @@ void AM::Terrain::render() {
         it->second.render();
     }
 }
+            
+bool AM::Terrain::chunkpos_in_renderdist(const AM::ChunkPos& origin, const AM::ChunkPos& chunk_pos) {
+
+    int abs_x = abs(origin.x - chunk_pos.x);
+    int abs_z = abs(origin.z - chunk_pos.z);
+
+    if(abs_x > m_engine->config.render_distance) {
+        return false;
+    }
+    if(abs_z > m_engine->config.render_distance) {
+        return false;
+    }
+
+    return true;
+}
+
+
 

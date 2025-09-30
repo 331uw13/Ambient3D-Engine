@@ -45,6 +45,8 @@ namespace AM {
             void unload_materials();
             void render();
 
+            bool chunkpos_in_renderdist(const AM::ChunkPos& origin, const AM::ChunkPos& chunk_pos);
+
             void set_engine_state(AM::State* engine_state) {
                 m_engine = engine_state;
             }

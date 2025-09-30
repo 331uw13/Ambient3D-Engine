@@ -13,7 +13,7 @@ AMBIENT3D_SHARED = ./shared
 
 
 LIBS = -L$(RAYLIB_PATH) -Wl,-rpath,$(RAYLIB_PATH) -lraylib_modified \
-	   -lGL -lm -lpthread -ldl -lrt -lX11 -ljsoncpp -llz4
+	   -lGL -lm -lpthread -ldl -lrt -lX11 -llz4
 
 OBJS = $(SRC:.cpp=.o)
 
@@ -22,7 +22,7 @@ all: $(TARGET_NAME)
 
 
 %.o: %.cpp
-	@$(CXX) $(FLAGS) $(LIBS) \
+	@$(CXX) $(FLAGS) \
 		-I$(AMBIENT3D_SHARED) \
 		-I$(RAYLIB_HEADERS) \
 		-c $< -o $@ && (echo -e "\033[32m[Compiled]\033[0m $<") || (echo -e "\033[31m[Failed]\033[0m $<"; exit 1) 

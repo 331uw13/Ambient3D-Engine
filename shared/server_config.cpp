@@ -29,6 +29,7 @@ void AM::ServerCFG::parse_from_memory(const json& data) {
     this->terrain_config_path = data["terrain_config_path"].template get<std::string>();
     this->tick_delay_ms = data["tick_delay_ms"].template get<float>();
     this->gravity = data["gravity"].template get<float>();
+    this->player_jump_force = data["player_jump_force"].template get<float>();
     this->player_cam_height = data["player_camera_height"].template get<float>();
     this->json_data = data.dump();
 }

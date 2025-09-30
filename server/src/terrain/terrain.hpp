@@ -36,7 +36,7 @@ namespace AM {
 
 
 
-            void foreach_chunk_nearby(float world_x, float world_z, 
+            void foreach_chunk_nearby(float world_x, float world_z, int distance, 
                     std::function<void(const AM::Chunk*, const AM::ChunkPos&)> callback);
             
             void set_server(AM::Server* server) { m_server = server; }

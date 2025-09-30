@@ -26,6 +26,7 @@ namespace AM {
         float chunk_scale;
         float tick_delay_ms;
         float gravity;
+        float player_jump_force;
         float player_cam_height;
         std::string json_data;
 

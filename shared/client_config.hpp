@@ -10,13 +10,16 @@ using json = nlohmann::json;
 
 namespace AM {
 
-    struct Config {
-        Config(){}
-        Config(const char* json_cfg_path);
+    struct ClientConfig {
+        ClientConfig(){}
+        ClientConfig(const char* json_cfg_path);
+        void parse_from_memory(const json& data);
 
         std::string fonts_directory;
         std::string font_file;
         int render_distance;
+
+        std::string json_data;
     };
 
 };

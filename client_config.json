@@ -2,6 +2,6 @@
 
     "fonts_directory": "./fonts/",
     "font_file": "OpenSans-BoldItalic.ttf",
-    "render_distance": 12
+    "render_distance": 8
 
 }

@@ -30,7 +30,8 @@ AM::Server::~Server() {
     m_chunkdata_buf.free_memory();
     
     for(auto player_it = this->players.begin(); player_it != this->players.end(); ++player_it) {
-        player_it->second.tcp_session->packet.free_memory();
+        AM::Player* player = player_it->second;
+        player->tcp_session->packet.free_memory();
     }
 
     printf("Server closed.\n");
@@ -117,7 +118,6 @@ void AM::Server::start(asio::io_context& io_context) {
 
             
 void AM::Server::remove_player(int player_id) {
-    this->players_mutex.lock();
 
     const auto search = this->players.find(player_id);
     if(search == this->players.end()) {
@@ -125,11 +125,12 @@ void AM::Server::remove_player(int player_id) {
                 __func__, player_id);
         return;
     }
-        
-    search->second.tcp_session->packet.free_memory();
-    this->players.erase(search);
 
-    this->players_mutex.unlock();
+    AM::Player* player = search->second;
+
+    player->tcp_session->packet.free_memory();
+    this->players.erase(search);
+    delete player;
 
     constexpr size_t msgbuf_size = 512;
     char msgbuf[msgbuf_size] = { 0 };
@@ -149,52 +150,46 @@ void AM::Server::m_do_accept_TCP() {
                     return;
                 }
 
-                this->players_mutex.lock();
-
                 int player_id = m_next_player_id++; // <- TODO: MAKE SURE THIS WILL NEVER OVERFLOW!
-                Player player(std::make_shared<TCP_session>(std::move(socket), this, player_id));
-                player.id = player_id;
-
-                this->players.insert(std::make_pair(player_id, player));
-                this->players_mutex.unlock();
-
-                player.tcp_session->packet.allocate_memory();
-                player.tcp_session->start();
                 
-                player.tcp_session->packet.prepare(AM::PacketID::PLAYER_ID);
-                player.tcp_session->packet.write<int>({ player_id });
-                player.tcp_session->send_packet();
+                AM::Player* player = new AM::Player(std::make_shared<AM::TCP_session>(std::move(socket), this, player_id));
+                player->set_id(player_id);
+                player->set_server(this);
+
+                this->players.insert(std::make_pair(player_id, player)).first;
+
+                player->tcp_session->packet.allocate_memory();
+                player->tcp_session->start();
+                
+                player->tcp_session->packet.prepare(AM::PacketID::PLAYER_ID);
+                player->tcp_session->packet.write<int>({ player_id });
+                player->tcp_session->send_packet();
+
+                printf("[SERVER]: Player(%i) has been prepared.\n", player_id);
 
                 m_do_accept_TCP();
             });
-
 }
-            
+
 AM::Player* AM::Server::get_player_by_id(int player_id) {
-    this->players_mutex.lock();
     const auto search = this->players.find(player_id);
     if(search == this->players.end()) {
         fprintf(stderr, "ERROR! No player found with ID: %i\n", player_id);
-        this->players_mutex.unlock();
         return NULL;
     }
 
-    this->players_mutex.unlock();
-    return (AM::Player*)&search->second;
+    return search->second;
 }
 
 
 void AM::Server::broadcast_msg(AM::PacketID packet_id, const std::string& msg) {
-    this->players_mutex.lock();
 
     for(auto it = this->players.begin(); it != this->players.end(); ++it) {
-        Player* p = &it->second;
+        Player* p = it->second;
         p->tcp_session->packet.prepare(packet_id);
         p->tcp_session->packet.write_string({ msg });
         p->tcp_session->send_packet();
     }
-
-    this->players_mutex.unlock();
 }
             
 void AM::Server::m_send_player_position(AM::Player* player) {
@@ -202,43 +197,42 @@ void AM::Server::m_send_player_position(AM::Player* player) {
         return;
     }
     
-    this->terrain.chunk_map_mutex.lock();
-    player->terrain_surface_y = this->terrain.get_surface_level(player->pos);
-    this->terrain.chunk_map_mutex.unlock();
-
-    bool on_ground = (player->pos.y <= player->terrain_surface_y);
-    AM::ChunkPos player_chunk_pos = this->terrain.get_chunk_pos(player->pos.x, player->pos.z);
-
-    player->pos.y = player->terrain_surface_y + this->config.player_cam_height;
+    
+    AM::Vec3 player_pos = player->next_position();
+    AM::ChunkPos player_chunk_pos = player->chunk_pos();
+    int update_axis_flags = player->next_position_flags();
 
     m_udp_handler.packet.prepare(AM::PacketID::PLAYER_POSITION);
-    m_udp_handler.packet.write<int>({
-            on_ground,
-            player_chunk_pos.x,
-            player_chunk_pos.z,
-            player->pos_xz_updated
+
+    m_udp_handler.packet.write<int>({ 
+        player->on_ground,
+        player_chunk_pos.x,
+        player_chunk_pos.z,
+        update_axis_flags
     });
 
-    if(player->pos_xz_updated) {
-        m_udp_handler.packet.write<float>({
-                player->pos.x,
-                player->pos.y,
-                player->pos.z
-        });
-        player->pos_xz_updated = false;
-    }
-    else {
-        m_udp_handler.packet.write<float>({
-                player->pos.y,
-        });
+    if(update_axis_flags != 0) {
+        if((update_axis_flags & AM::FLG_PLAYER_UPDATE_XZ_AXIS)
+        && (update_axis_flags & AM::FLG_PLAYER_UPDATE_Y_AXIS)) {
+            m_udp_handler.packet.write<float>({
+                    player_pos.x,
+                    player_pos.y,
+                    player_pos.z
+            });
+        }
+        else
+        if((update_axis_flags & AM::FLG_PLAYER_UPDATE_Y_AXIS)
+        && !(update_axis_flags & AM::FLG_PLAYER_UPDATE_XZ_AXIS)) { // Only Y
+            m_udp_handler.packet.write<float>({ player_pos.y });
+        }
     }
 
-    m_udp_handler.send_packet(player->id);
+    player->clear_next_position_flags();
+    m_udp_handler.send_packet(player->id());
 }
  
 
 void AM::Server::m_send_player_updates() {
-    this->players_mutex.lock();
 
     // Tell players each others position, camera yaw and pitch.
     
@@ -248,31 +242,31 @@ void AM::Server::m_send_player_updates() {
 
     for(auto itA = this->players.begin();
             itA != this->players.end(); ++itA) {
-        Player* player = &itA->second;
+        Player* player = itA->second;
 
-        player->update_gravity(this->config.gravity);
+        player->update();
         m_send_player_position(player);
 
         for(auto itB = this->players.begin();
                 itB != this->players.end(); ++itB) {
-            const Player* p = &itB->second;
-            if(p->id == player->id) { continue; }
+            const Player* p = itB->second;
+            if(p->id() == player->id()) { continue; }
+
+            AM::Vec3 player_pos = player->position();
 
             m_udp_handler.packet.prepare(AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA);
-            m_udp_handler.packet.write<int>({ player->id, player->anim_id });
+            m_udp_handler.packet.write<int>({ player->id(), player->animation_id() });
             m_udp_handler.packet.write<float>({
-                    player->pos.x,
-                    player->pos.y,
-                    player->pos.z,
-                    player->cam_yaw,
-                    player->cam_pitch
+                    player_pos.x,
+                    player_pos.y,
+                    player_pos.z,
+                    player->cam_yaw(),
+                    player->cam_pitch()
             });
 
-            m_udp_handler.send_packet(p->id);
+            m_udp_handler.send_packet(p->id());
         }
     }
-
-    this->players_mutex.unlock();
 }
 
 void AM::Server::m_send_item_updates() {
@@ -286,7 +280,7 @@ void AM::Server::m_send_item_updates() {
 
     for(auto it = this->players.begin();
             it != this->players.end(); ++it) {
-        const Player* player = &it->second;
+        const Player* player = it->second;
         if(!player->tcp_session->is_fully_connected()) {
             continue;
         }
@@ -298,7 +292,7 @@ void AM::Server::m_send_item_updates() {
                 item_it != this->dropped_items.end(); ++item_it) {
             AM::ItemBase* item = &item_it->second;
 
-            if(player->pos.distance(AM::Vec3(item->pos_x, item->pos_y, item->pos_z))
+            if(player->position().distance(AM::Vec3(item->pos_x, item->pos_y, item->pos_z))
                     > config.item_near_distance) {
                 continue; // Too far away to care.
             }
@@ -320,7 +314,7 @@ void AM::Server::m_send_item_updates() {
         }
 
         if(num_items_nearby) {
-            m_udp_handler.send_packet(player->id);
+            m_udp_handler.send_packet(player->id());
         }
     }
 
@@ -328,7 +322,6 @@ void AM::Server::m_send_item_updates() {
 }
 
 void AM::Server::m_send_player_chunk_updates() {
-    this->players_mutex.lock();
     this->terrain.chunk_map_mutex.lock();
             
     const size_t height_points_sizeb = ((this->config.chunk_size+1) * (this->config.chunk_size+1)) * sizeof(float);
@@ -337,7 +330,7 @@ void AM::Server::m_send_player_chunk_updates() {
 
     for(auto it = this->players.begin();
             it != this->players.end(); ++it) {
-        Player* player = &it->second;
+        Player* player = it->second;
         if(!player->tcp_session->is_fully_connected()) {
             continue;
         }
@@ -349,7 +342,10 @@ void AM::Server::m_send_player_chunk_updates() {
         chunk_positions.clear();
         m_chunkdata_buf.clear();
 
-        this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
+        AM::Vec3 player_pos = player->position();
+
+        this->terrain.foreach_chunk_nearby(player_pos.x, player_pos.z,
+        player->tcp_session->config.render_distance,
         [this, &num_chunks, &height_points_sizeb, &chunk_positions, player]
         (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos) {
         
@@ -406,25 +402,22 @@ void AM::Server::m_send_player_chunk_updates() {
         printf("[CHUNK_UPDATE] (Uncompressed %0.2fkB) -> (Compressed %0.2fkB) to player_id: %i\n",
                 (float)m_chunkdata_buf.size_inbytes() / 1000.0f,
                 (float)compressed_size / 1000.0f, 
-                player->id
-                );
+                player->id());
+
         m_udp_handler.packet.size = compressed_size + sizeof(AM::PacketID);
-        m_udp_handler.send_packet(player->id);
+        m_udp_handler.send_packet(player->id());
     }
 
-    this->players_mutex.unlock();
     this->terrain.chunk_map_mutex.unlock();
 }
 
 void AM::Server::m_process_resend_id_queue() {
-    this->players_mutex.lock();
     for(int player_id : this->resend_player_id_queue) {
         AM::Player* player = this->get_player_by_id(player_id);
         player->tcp_session->packet.prepare(AM::PacketID::PLAYER_ID);
         player->tcp_session->packet.write<int>({ player_id });
         player->tcp_session->send_packet();
     }
-    this->players_mutex.unlock();
 
     this->resend_player_id_queue.clear();
 }
@@ -454,17 +447,19 @@ void AM::Server::m_update_loop_th__func() {
 void AM::Server::m_worldgen_th__func() {
     
     while(m_keep_threads_alive) {
-        this->players_mutex.lock();
         this->terrain.chunk_map_mutex.lock();
 
         for(auto it = this->players.begin();
                 it != this->players.end(); ++it) {
-            const Player* player = &it->second;
+            const Player* player = it->second;
             if(!player->tcp_session->is_fully_connected()) {
                 continue;
             }
 
-            this->terrain.foreach_chunk_nearby(player->pos.x, player->pos.z,
+            AM::Vec3 player_pos = player->position();
+
+            this->terrain.foreach_chunk_nearby(player_pos.x, player_pos.z,
+            player->tcp_session->config.render_distance,
             [this](const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos) {
                 if(!chunk) {
                     AM::Chunk chunk;
@@ -476,7 +471,6 @@ void AM::Server::m_worldgen_th__func() {
         }
         
         this->terrain.chunk_map_mutex.unlock();
-        this->players_mutex.unlock();
 
 
         std::this_thread::sleep_for(
@@ -516,9 +510,7 @@ void AM::Server::m_userinput_handler_th__func() {
         }
         else
         if(input == "online") {
-            this->players_mutex.lock();
             printf("Online players: %li\n", this->players.size());
-            this->players_mutex.unlock();
         }
         else {
             printf(" Unknown command.\n");

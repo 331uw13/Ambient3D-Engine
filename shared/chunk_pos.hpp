@@ -13,7 +13,7 @@ namespace AM {
         ChunkPos(){}
         ChunkPos(int _x, int _z) : x(_x), z(_z) {}
 
-        float distance(const AM::ChunkPos& rhs);
+        //float distance(const AM::ChunkPos& rhs);
 
         bool operator==(const ChunkPos& rhs) const {
             return (this->x == rhs.x && this->z == rhs.z);

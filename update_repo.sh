@@ -5,6 +5,11 @@ if [[ -z $1 ]]; then
     exit
 fi
 
+make clean
+rm -rf ./raylib/build
+(cd server/ && make clean)
+
+
 git add .
 git commit -m "$1"
 git push -u origin main

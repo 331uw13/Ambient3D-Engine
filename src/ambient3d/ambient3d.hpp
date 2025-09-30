@@ -16,7 +16,7 @@
 #include "glsl_preproc.hpp"
 #include "util.hpp"
 #include "timer.hpp"
-#include "config.hpp"
+#include "client_config.hpp"
 #include "network/network.hpp"
 #include "terrain/terrain.hpp"
 #include "transparent_str_hash.hpp"
@@ -31,7 +31,7 @@ namespace AM {
     static constexpr float FRICTION_TCONST = 120.0f;
 
     static constexpr float FAST_FIXED_TICK_DELAY_SECONDS = 0.075f;
-    static constexpr float SLOW_FIXED_TICK_DELAY_SECONDS = 6.0f;
+    static constexpr float SLOW_FIXED_TICK_DELAY_SECONDS = 4.0f;
 
     enum ShaderIDX : int {
         DEFAULT,
@@ -63,7 +63,7 @@ namespace AM {
             Terrain      terrain;
             ItemManager  item_manager;
             Network*     net;
-            Config       config;
+            ClientConfig config;
 
             // Set to true when complete connection is ready.
             std::atomic<bool> ready { false };

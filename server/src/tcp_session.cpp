@@ -30,8 +30,13 @@ AM::TCP_session::TCP_session(tcp::socket socket, AM::Server* server, int player_
 
 void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
     AM::PacketID packet_id = AM::parse_network_packet(m_data, sizeb);
-    if(packet_id == AM::PacketID::NONE) {
-        return;
+
+    if(m_server->show_debug_info) {
+        printf("[TCP] (PacketID=%i) -> ", packet_id);
+        for(size_t i = 0; i < sizeb; i++) {
+            printf("0x%x, ", m_data[i]);
+        }
+        printf("\n");
     }
 
     switch(packet_id) {
@@ -76,6 +81,15 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
             }
             break;
 
+        case AM::PacketID::CLIENT_CONFIG:
+            {
+                printf("[NETWORK]: Received client config:\n%s\n", m_data);
+                this->config.parse_from_memory(json::parse(m_data));
+                this->packet.prepare(AM::PacketID::SERVER_GOT_CLIENT_CONFIG);
+                this->send_packet(); 
+            }
+            break;
+
         case AM::PacketID::PLAYER_FULLY_CONNECTED:
             {
                 m_fully_connected = true;
@@ -105,6 +119,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                     return;
                 }
 
+                int num_chunks = 0;
+
                 while(byte_offset < sizeb) {
                     memmove(&chunk_x, &m_data[byte_offset], sizeof(int));
                     byte_offset += sizeof(int);
@@ -117,8 +133,11 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                         continue;
                     }
 
+                    num_chunks++;
                     player->loaded_chunks.erase(chunk_search);
                 }
+
+                printf("Unloaded %i chunks for player: %i\n", num_chunks, this->player_id);
             }
             break;
 
@@ -136,10 +155,10 @@ void AM::TCP_session::m_do_read() {
                 if(ec) {
                     printf("[read_tcp](%i): %s\n", ec.value(), ec.message().c_str());
                     m_server->remove_player(self->player_id);
-                    return;
                 }
-                
-                m_handle_received_packet(size);
+                else {
+                    m_handle_received_packet(size);
+                }
                 m_do_read();
             });
 
@@ -160,7 +179,7 @@ void AM::TCP_session::send_packet() {
                     return;
                 }
             });
-    
+
     this->packet.enable_flag(AM::Packet::FLG_COMPLETE);
 }
 

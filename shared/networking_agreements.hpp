@@ -10,6 +10,10 @@ namespace AM {
     static constexpr uint8_t PACKET_DATA_STOP = 0x3;
     static constexpr size_t MAX_PACKET_SIZE = 1024 * 256;
 
+    // For AM::PacketID::PLAYER_POSITION 'update_axis'
+    static constexpr int FLG_PLAYER_UPDATE_Y_AXIS = (1 << 0);
+    static constexpr int FLG_PLAYER_UPDATE_XZ_AXIS = (1 << 1);
+
 };
 
 #endif

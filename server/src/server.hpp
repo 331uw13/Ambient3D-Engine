@@ -39,8 +39,7 @@ namespace AM {
 
             void start(asio::io_context& io_context);
             
-            std::mutex                          players_mutex;
-            std::map<int/*player_id*/, Player>  players;
+            std::map<int/*player_id*/, Player*> players;
            
             // 'item_templates' is an array of item info loaded from items/item_list.json
             // when server spawns an item 

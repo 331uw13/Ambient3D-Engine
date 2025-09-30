@@ -5,14 +5,16 @@
 #include <memory>
 #include <vector>
 #include <string>
-
+#include <nlohmann/json.hpp>
 #include <asio.hpp>
+
+using json = nlohmann::json;
 using namespace asio::ip;
 
 
 // From '../../shared'
 #include "packet_writer.hpp"
-
+#include "client_config.hpp"
 
 namespace AM {
     class Server;
@@ -25,11 +27,11 @@ namespace AM {
 
             Packet packet;
             void send_packet();
-
-            
             int  player_id;
             
             bool is_fully_connected() { return m_fully_connected; }
+
+            AM::ClientConfig config;
 
         private:
 

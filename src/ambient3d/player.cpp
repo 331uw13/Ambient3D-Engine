@@ -214,12 +214,22 @@ void AM::Player::update_movement(bool handle_user_input) {
         }
     }
 
+    if(IsKeyPressed(KEY_SPACE)) {
+        this->jump();
+    }
+
     m_position += m_velocity * frame_time;
     this->camera.position = m_position;
     this->camera.target = m_position + cam_dir;
     m_velocity *= pow(m_movement_friction, AM::FRICTION_TCONST * frame_time);
 }
 
+
+void AM::Player::jump() {
+    m_engine->net->packet.prepare(AM::PacketID::PLAYER_JUMP);
+    m_engine->net->packet.write<int>({ m_engine->net->player_id });
+    m_engine->net->send_packet(AM::NetProto::UDP);
+}
 
  
 void AM::Player::update_camera() {
@@ -236,25 +246,30 @@ void AM::Player::update_position_from_server() {
         return;
     }
 
-    if(!Y_pos_update_stack.empty()) {
+    if(Y_pos_update_stack.size() >= 2) {
         m_update_Y_axis_position();
-
     }
-    if(!XZ_pos_update_stack.empty()) {
+
+    if(XZ_pos_update_stack.size() >= 2) {
         m_update_XZ_axis_position();
     }
 }
 
 void AM::Player::m_update_Y_axis_position() {
+    /*if(!this->on_ground) {
+        return;
+    }*/
+
     AM::Timer* ypos_interp_timer = m_engine->get_named_timer("PLAYER_YPOS_INTERP_TIMER");
     float interp_t = ypos_interp_timer->time_ms() / m_engine->net->get_packet_interval_ms(AM::PacketID::PLAYER_POSITION);
-    
+
     std::lock_guard<std::mutex> lock2(m_mutex);
     m_position.y = Lerp(
             // The latest position is added at top of the stack.
             this->Y_pos_update_stack.read_index(1),
             this->Y_pos_update_stack.read_index(0),
             interp_t);
+
 }
 
 void AM::Player::m_update_XZ_axis_position() {

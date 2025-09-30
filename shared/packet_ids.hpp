@@ -37,6 +37,8 @@ namespace AM {
             Server -> Client  (SAVE_ITEM_LIST)           (TCP)
             Server <- Client  (GET_SERVER_CONFIG)        (TCP)
             Server -> Client  (SERVER_CONFIG)            (TCP)
+            Server <- Client  (CLIENT_CONFIG)            (TCP)
+            Server -> Client  (SERVER_GOT_CLIENT_CONFIG) (TCP)
             Server <- Client  (PLAYER_FULLY_CONNECTED)   (TCP)
         */
 
@@ -77,6 +79,16 @@ namespace AM {
         // 4            :  Config json      (char array)
         SERVER_CONFIG,  // (tcp only)
 
+        // Client will sent its config to the server.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Config json      (char array)
+        CLIENT_CONFIG,  // (tcp only)
+       
+        SERVER_GOT_CLIENT_CONFIG,
+
         // Client must tell the server it has been fully connected
         // after it stored all needed information.
         PLAYER_FULLY_CONNECTED, // (tcp only)
@@ -86,7 +98,6 @@ namespace AM {
 
         // World generation is server side.
         // This packet can send chunk data to client.
-        // TODO: It is probably good idea to compress these packets in the future.
         //
         // Byte offset  |  Value name
         // ---------------------------------
@@ -132,9 +143,9 @@ namespace AM {
         // 28           :  Camera Pitch     (float)
         PLAYER_MOVEMENT_AND_CAMERA, // (udp only)
 
-        // Server is going to send player their position.
-        // This is because sometimes the player may collide with something
-        // and the position must be changed from the server.
+        // This packet can be used by the server to set player's positions.
+        // Can be used with collision checks so player doesnt clip into something.
+        // For example: Y position is usually used for terrain surface.
         //
         // Byte offset  |  Value name
         // ---------------------------------
@@ -142,19 +153,40 @@ namespace AM {
         // 4            :  On ground        (bool)
         // 8            :  Chunk X          (int)
         // 12           :  Chunk Z          (int)
-        // 16           :  Update XZ axis   (bool)
+        // 16           :  Update axis      (int) (0 or flags: AM::UPDATE_PLAYER_Y_AXIS, AM::UPDATE_PLAYER_XZ_AXIS)
         //
-        //              if "Update XZ axis" is true the full position is sent.
+        //
+        //  If (update_axis & AM::UPDATE_PLAYER_Y_AXIS)
+        //  then rest of packet contains:
+        //
+        // 20           :  Y Position       (float)  
+        //
+        //  If (update_axis & AM::UPDATE_PLAYER_XZ_AXIS)
+        //  then rest of packet contains:
+        //
+        // 20           :  X Position       (float)
+        // 24           :  Z Position       (float)
+        //
+        //  If ((update_axis & AM::UPDATE_PLAYER_XZ_AXIS) && (update_axis & AM::UPDATE_PLAYER_Y_AXIS))
+        //  then rest of packet contains:
         //
         // 20           :  X Position       (float)
         // 24           :  Y Position       (float)
         // 28           :  Z Position       (float)
         //
-        //              The packet may also contain only the Y position.
-        //
-        // 20           :  Y Position       (float)
+        // 
+        //  If update_axis == 0:
+        //  then rest of the packet doesnt contain anything else.
         //
         PLAYER_POSITION, // (udp only)
+
+        // Players can send jump packet to server.
+        // 
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Player ID        (int)
+        PLAYER_JUMP,
 
         // Server will send item update packets to let nearby 
         // clients know where the items are.
@@ -186,9 +218,10 @@ namespace AM {
         static constexpr size_t PLAYER_ID = 4;
         static constexpr size_t PLAYER_CONNECTED = 4;
         static constexpr size_t PLAYER_UNLOADED_CHUNK = 8;
-        static constexpr size_t PLAYER_POSITION_MIN = 20;
+        static constexpr size_t PLAYER_POSITION_MIN = 16;
         static constexpr size_t PLAYER_POSITION_MAX = 28;
         static constexpr size_t PLAYER_UNLOADED_CHUNKS_MIN = 8;
+        static constexpr size_t PLAYER_JUMP = 4;
     };
 };
 

@@ -59,6 +59,7 @@ void AM::Packet::prepare(AM::PacketID packet_id) {
     && ((this->size > sizeof(AM::PacketID)) || (this->size == 0))
     && (m_current_thread_id != this_thread_id))
     {
+        printf("%s: FUCK\n",__func__);
         m_mutex.unlock();
         printf("WARNING! %s() at \"%s\": Waiting until another thread finishes writing...\n",
                 __func__, __FILE__);

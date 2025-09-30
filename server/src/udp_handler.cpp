@@ -8,12 +8,9 @@
 
 void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
     AM::PacketID packet_id = AM::parse_network_packet(m_data, sizeb);
-    if(packet_id == AM::PacketID::NONE) {
-        return;
-    }
 
     if(m_server->show_debug_info) {
-        printf("(%i) -> ", packet_id);
+        printf("[UDP] (PacketID=%i) -> ", packet_id);
         for(size_t i = 0; i < sizeb; i++) {
             printf("0x%x, ", m_data[i]);
         }
@@ -36,19 +33,16 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
                 if(!player) {
                     return;
                 }
-                
-                m_server->players_mutex.lock();
 
                 const auto search = m_recv_endpoints.find(player_id);
                 if(search == m_recv_endpoints.end()) {
                     m_recv_endpoints.insert(std::make_pair(player_id, m_sender_endpoint));
                 }
 
-                //AM::packet_prepare(&player->tcp_session->packet, AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
-                //AM::packet_write_int(&player->tcp_session->packet, { 1 });
                 player->tcp_session->packet.prepare(AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED);
                 player->tcp_session->send_packet();
-                m_server->players_mutex.unlock();
+                printf("[NETWORK]: PlayerID(%i) has been saved.\n", player_id);
+            
             }
             break;
 
@@ -70,19 +64,49 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
 
                 size_t offset = sizeof(player_id);
                 
-                memmove(&player->anim_id, m_data+offset, sizeof(int));
+                int anim_id = 0;
+                AM::Vec3 position = {};
+                float cam_yaw = 0;
+                float cam_pitch = 0;
+
+                memmove(&anim_id, m_data+offset, sizeof(int));
                 offset += sizeof(int);
                 
-                memmove(&player->pos, m_data+offset, sizeof(float)*3);
+                memmove(&position, m_data+offset, sizeof(float)*3);
                 offset += sizeof(float)*3;
 
-                memmove(&player->cam_yaw, m_data+offset, sizeof(float));
+                memmove(&cam_yaw, m_data+offset, sizeof(float));
                 offset += sizeof(float);
                 
-                memmove(&player->cam_pitch, m_data+offset, sizeof(float));
+                memmove(&cam_pitch, m_data+offset, sizeof(float));
                 //offset += sizeof(float);
+            
+                player->set_position(position);
+                player->set_cam_yaw(cam_yaw);
+                player->set_cam_pitch(cam_pitch);
+                player->set_animation_id(anim_id);
+            }
+            break;
 
+        case AM::PacketID::PLAYER_JUMP:
+            if(sizeb != AM::PacketSize::PLAYER_JUMP) {
+                fprintf(stderr, "ERROR! Unexpected packet size for: "
+                        "PLAYER_MOVEMENT_AND_CAMERA (Got: %li bytes)\n",
+                        sizeb);
+                return;
+            }
+            {
+                int player_id = -1;
+                memmove(&player_id, m_data, sizeof(player_id));
 
+                AM::Player* player = m_server->get_player_by_id(player_id);
+                if(!player) {
+                    return;
+                }
+
+                //player->set_velocity(player->velocity() + AM::Vec3(0.0f, 1.0f, 0.0f));
+
+                printf("[NETWORK]: Player(%i) jumped.\n", player_id);
             }
             break;
     }
@@ -97,10 +121,11 @@ void AM::UDP_handler::m_do_read() {
             [this](std::error_code ec, std::size_t size) {
                 if(ec) {
                     printf("[read_udp](%i): %s\n", ec.value(), ec.message().c_str());
-                    return;
+                }
+                else {
+                    m_handle_received_packet(size);
                 }
 
-                m_handle_received_packet(size);
                 m_do_read();
             });
 }

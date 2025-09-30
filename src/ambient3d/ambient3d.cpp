@@ -10,7 +10,7 @@ AM::State::State(
         const char* config_file,
         AM::NetConnectCFG network_cfg) {
  
-    this->config = AM::Config(config_file);
+    this->config = AM::ClientConfig(config_file);
 
     // Initialize network.
 
@@ -442,36 +442,36 @@ void AM::State::m_slow_fixed_tick_update() {
 
         // Unload far away chunks and send updates to the server.
         // This should be optimized a bit in the future 
-        // but doesnt matter right now because this code runs only about every 6 seconds.
+        // but doesnt matter right now because this code runs only about every 4 seconds.
 
-        printf("SLOW TICK!\n");
         std::vector<AM::ChunkPos> unloaded_chunk_positions;
         AM::ChunkPos player_chunk_pos = this->player.chunk_pos();
 
-        printf("%i, %i\n", player_chunk_pos.x, player_chunk_pos.z);
+        int num_chunks = 0;
 
         for(auto chunk_it = this->terrain.chunk_map.begin();
                 chunk_it != this->terrain.chunk_map.end(); ) {
             AM::Chunk* chunk = &chunk_it->second;
+            num_chunks++;
             
-            if(chunk->pos.distance(player_chunk_pos) > this->config.render_distance) {
-                chunk->unload();
-            }
-
-            if(!chunk->is_loaded()) {
+            if(!this->terrain.chunkpos_in_renderdist(player_chunk_pos, chunk->pos)) {
                 unloaded_chunk_positions.push_back(chunk->pos);
-                this->terrain.chunk_map.erase(chunk_it++);
+                chunk->unload();
+                chunk_it = this->terrain.chunk_map.erase(chunk_it);
                 continue;
             }
 
             ++chunk_it;
         }
 
-        printf("Num chunks unloaded: %li\n", unloaded_chunk_positions.size());
-
         if(!unloaded_chunk_positions.empty()) {
+            printf("[STATE]: Unloaded %li chunks.\n", unloaded_chunk_positions.size());
             
-            //AM::packet_prepare(&this->net->packet, );
+            this->net->packet.prepare(AM::PacketID::PLAYER_UNLOADED_CHUNKS);
+            for(const AM::ChunkPos& chunk_pos : unloaded_chunk_positions) {
+                this->net->packet.write<int>({ chunk_pos.x, chunk_pos.z });
+            }
+            this->net->send_packet(AM::NetProto::TCP);
         }
 
         // Callback to user if needed.

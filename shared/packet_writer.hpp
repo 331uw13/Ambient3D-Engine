@@ -69,7 +69,7 @@ namespace AM {
         private:
             int m_flags { 0 };
             std::thread::id m_current_thread_id;
-            std::mutex m_mutex;
+            mutable std::mutex m_mutex;
     };
 };
 

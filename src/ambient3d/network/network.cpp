@@ -97,12 +97,24 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         m_engine->item_manager.set_server_config(this->server_cfg);
 
         //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_FULLY_CONNECTED);
-        this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
-        this->send_packet(AM::NetProto::TCP);
+        //this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
+        //this->send_packet(AM::NetProto::TCP);
         
+        this->packet.prepare(AM::PacketID::CLIENT_CONFIG);
+        this->packet.write_string({ m_engine->config.json_data });
+        this->send_packet(AM::NetProto::TCP);
+
         // The regenbuf will not be allocated if it already is.
         m_engine->terrain.allocate_regenbuf(this->server_cfg.chunkdata_uncompressed_max_bytes);
         m_fully_connected = true;
+    });
+
+    this->add_packet_callback(
+    AM::NetProto::TCP,
+    AM::PacketID::SERVER_GOT_CLIENT_CONFIG,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
+        this->send_packet(AM::NetProto::TCP);
     });
 }
 
@@ -125,39 +137,84 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         int on_ground = 1;
         int chunk_x = 0;
         int chunk_z = 0;
-        int update_xz_axis = 0;
+        int update_axis_flags = 0;
         Vector3 position = { 0, 0, 0 };
 
         memmove(&on_ground, &data[byte_offset], sizeof(int));
         byte_offset += sizeof(int);
-       
+
         memmove(&chunk_x, &data[byte_offset], sizeof(int));
         byte_offset += sizeof(int);
         
         memmove(&chunk_z, &data[byte_offset], sizeof(int));
         byte_offset += sizeof(int);
 
-        memmove(&update_xz_axis, &data[byte_offset], sizeof(int));
+        memmove(&update_axis_flags, &data[byte_offset], sizeof(int));
         byte_offset += sizeof(int);
 
         m_engine->player.set_chunk_pos(AM::ChunkPos(chunk_x, chunk_z));
+        m_engine->player.on_ground = (bool)std::clamp(on_ground, 0, 1);
 
-        if(!update_xz_axis) {
+
+        if(update_axis_flags != 0) {
+            if((update_axis_flags & AM::FLG_PLAYER_UPDATE_XZ_AXIS)
+            && (update_axis_flags & AM::FLG_PLAYER_UPDATE_Y_AXIS)) {
+                memmove(&position, &data[byte_offset], sizeof(Vector3));
+                
+                // Update stacks to interpolate the position.
+                m_engine->player.Y_pos_update_stack.push_front(position.y);
+                m_engine->player.XZ_pos_update_stack.push_front(Vector2(position.x, position.z));
+            }
+            else
+            if((update_axis_flags & AM::FLG_PLAYER_UPDATE_Y_AXIS)
+            && !(update_axis_flags & AM::FLG_PLAYER_UPDATE_XZ_AXIS)) { // Only Y
+                memmove(&position.y, &data[byte_offset], sizeof(float));
+                
+                // Update stacks to interpolate the position.
+                m_engine->player.Y_pos_update_stack.push_front(position.y);
+                m_engine->player.XZ_pos_update_stack.pop_back();
+            }
+        }
+        else {
+            m_engine->player.XZ_pos_update_stack.pop_back();
+            m_engine->player.Y_pos_update_stack.pop_back();
+        }
+
+        /*
+        if(update_axis_settings == AM::UPDATE_PLAYER_Y_AXIS) {
+            // Packet contains only Y
             memmove(&position.y, &data[byte_offset], sizeof(float));
             m_engine->player.Y_pos_update_stack.push_front(position.y);
         }
         else
-        if (sizeb == AM::PacketSize::PLAYER_POSITION_MAX) {
+        if(update_axis_settings == AM::UPDATE_PLAYER_XYZ_AXIS
+        && (sizeb == AM::PacketSize::PLAYER_POSITION_MAX)) {
+            // Packet contains X,Y,Z
             memmove(&position, &data[byte_offset], sizeof(Vector3));
             m_engine->player.Y_pos_update_stack.push_front(position.y);
             m_engine->player.XZ_pos_update_stack.push_front(Vector2(position.x, position.z));
         }
+        */
+
+        /*
+        if(!update_xz_axis && on_ground) {
+        }
+        else
+        if (sizeb == AM::PacketSize::PLAYER_POSITION_MAX) {
+        }
+        else {
+            // Clear previous positions from the stack.
+            // They are no longer valid.
+        }
+        */
+
+        /*
         else {
             fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
                     "for PLAYER_POSITION (update_xz_axis == true)\n", sizeb);
         }
+        */
 
-        m_engine->player.on_ground = (bool)std::clamp(on_ground, 0, 1);
     });
 
 

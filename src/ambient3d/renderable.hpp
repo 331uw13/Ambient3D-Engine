@@ -13,7 +13,7 @@
 namespace AM {
     
     static constexpr size_t RENDERABLE_MAX_NAME_SIZE = 24;
-    static constexpr float MATERIAL_DEFAULT_SHINE = 0.3f;
+    static constexpr float MATERIAL_DEFAULT_SHINE = 0.1f;
     static constexpr float MATERIAL_DEFAULT_SPECULAR = 6.0f;
 
     struct MeshAttrib {

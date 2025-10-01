@@ -130,18 +130,8 @@ void AM::Player::update() {
 
     m_terrain_surface_y = m_server->terrain.get_surface_level(m_position);
     m_chunk_pos = m_server->terrain.get_chunk_pos(m_position.x, m_position.z);
-    this->on_ground = ((m_position.y - (m_server->config.player_cam_height+0.1f)) < m_terrain_surface_y);
-
-    if(this->on_ground) {
-        m_next_position.y = m_terrain_surface_y + m_server->config.player_cam_height;
-        m_next_position_flags |= FLG_PLAYER_UPDATE_Y_AXIS;
-    }
-
-    m_update_gravity();
+        
+    this->on_ground = ((m_position.y - (m_server->config.player_cam_height)) < m_terrain_surface_y);
 }
 
-            
-void AM::Player::m_update_gravity() {
-
-}
 

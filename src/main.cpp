@@ -25,7 +25,7 @@ struct GameState {
 void render_scene(AM::State* st, GameState* gst) {
     const float frame_time = GetFrameTime();
     
-    //DrawSphere((*gst->lightA)->pos, 1.0f, (*gst->lightA)->color);
+    DrawSphere((*gst->lightA)->pos, 1.0f, (*gst->lightA)->color);
     DrawSphere((*gst->lightB)->pos, 1.0f, (*gst->lightB)->color);
     DrawSphere((*gst->lightC)->pos, 1.0f, (*gst->lightC)->color);
     DrawSphere((*gst->lightD)->pos, 1.0f, (*gst->lightD)->color);
@@ -35,11 +35,14 @@ void render_scene(AM::State* st, GameState* gst) {
 
     // Render other players in the server.
     st->net->foreach_online_players(
-    [gst, frame_time](AM::N_Player* player) {
+    [st, gst, frame_time](AM::N_Player* player) {
      
         gst->robot.anim.update(player->anim_id, frame_time, gst->robot.get_model());
 
-        Matrix translation = MatrixTranslate(player->pos.x, player->pos.y, player->pos.z);
+        Matrix translation = MatrixTranslate(
+                player->pos.x,
+                player->pos.y,
+                player->pos.z);
         Matrix body_rotation = MatrixRotateY(player->cam_yaw);
        
         // Head rotation.
@@ -127,8 +130,7 @@ void main_loop(AM::State* st) {
             }
         }
 
-        if(IsKeyPressed(KEY_K)) {
-    
+        if(IsKeyPressed(KEY_K)) {    
             std::thread test_th_1([st](){
                 printf("TEST_TRHEAD 1  Preparing packet.\n");
                 st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
@@ -144,13 +146,10 @@ void main_loop(AM::State* st) {
                 st->net->send_packet(AM::NetProto::UDP);
             });
 
-
             test_th_1.join();
             test_th_2.join();
-
         }
 
-        (*gst.lightA)->pos = st->player.position();
 
         (*gst.lightB)->pos.x += sin(GetTime()) * 0.01;
         (*gst.lightB)->pos.z += cos(GetTime()) * 0.01;

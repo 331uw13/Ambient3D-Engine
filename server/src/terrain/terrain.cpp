@@ -2,8 +2,8 @@
 #include <cmath>
 
 #include "terrain.hpp"
+#include "ray.hpp"
 #include "../server.hpp"
-#include "../ray.hpp"
 
 
 void AM::Terrain::add_chunk(const AM::Chunk& chunk) {

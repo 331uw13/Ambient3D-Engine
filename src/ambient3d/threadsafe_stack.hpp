@@ -54,6 +54,12 @@ namespace AM {
                 m_mutex.unlock();
             }
 
+            void clear() {
+                m_mutex.lock();
+                m_stack.clear();
+                m_mutex.unlock();
+            }
+
             [[nodiscard]] size_t size() const {
                 m_mutex.lock();
                 size_t _size = m_stack.size();

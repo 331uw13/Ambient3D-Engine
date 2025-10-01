@@ -27,6 +27,15 @@ void AM::Player::set_velocity(const Vector3& vel) {
     m_velocity = vel;
 }
 
+float AM::Player::terrain_surface_y() const {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_terrain_surface_y;
+}
+
+void AM::Player::set_terrain_surface_y(float y) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_terrain_surface_y = y;
+}
 
 float AM::Player::walking_speed() const {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -152,9 +161,9 @@ AM::Player::~Player() {
 }
  
         
-void AM::Player::update_animation() {
+/*
+void AM::Player::m_update_animation() {
 
-    /*
     // IDLE is default.
     this->anim_id = AM::AnimID::IDLE;
 
@@ -164,13 +173,17 @@ void AM::Player::update_animation() {
     if(this->is_running) {
         this->anim_id = AM::AnimID::RUNNING;
     }
-    */
+        
+    m_animation_id = AM::AnimID::RUNNING;
 }
+*/
 
 
 void AM::Player::update_movement(bool handle_user_input) {
     std::lock_guard<std::mutex> lock(m_mutex);
     this->prevframe_positions.push_front(m_position);
+
+    m_animation_id = AM::AnimID::IDLE;
 
     const float frame_time = GetFrameTime();
     
@@ -186,6 +199,7 @@ void AM::Player::update_movement(bool handle_user_input) {
 
     if(IsKeyDown(KEY_LEFT_SHIFT)) {
         m_current_move_speed = m_running_speed;
+        m_animation_id = AM::AnimID::RUNNING;
     }
     else {
         m_current_move_speed = m_walking_speed;
@@ -197,26 +211,31 @@ void AM::Player::update_movement(bool handle_user_input) {
         if(IsKeyDown(KEY_W)) {
             m_velocity.x -= m_camera_forward.x * move_speed_ft;
             m_velocity.z -= m_camera_forward.z * move_speed_ft;
+            m_animation_id = AM::AnimID::WALKING;
         }
         else
         if(IsKeyDown(KEY_S)) {
             m_velocity.x += m_camera_forward.x * move_speed_ft;
             m_velocity.z += m_camera_forward.z * move_speed_ft;
+            m_animation_id = AM::AnimID::WALKING;
         }
         if(IsKeyDown(KEY_A)) {
             m_velocity.x -= m_camera_right.x * move_speed_ft;
             m_velocity.z -= m_camera_right.z * move_speed_ft;
+            m_animation_id = AM::AnimID::WALKING;
         }
         else
         if(IsKeyDown(KEY_D)) {
             m_velocity.x += m_camera_right.x * move_speed_ft;
             m_velocity.z += m_camera_right.z * move_speed_ft;
+            m_animation_id = AM::AnimID::WALKING;
         }
     }
 
     if(IsKeyPressed(KEY_SPACE)) {
-        this->jump();
+        m_jump();
     }
+
 
     m_position += m_velocity * frame_time;
     this->camera.position = m_position;
@@ -225,10 +244,16 @@ void AM::Player::update_movement(bool handle_user_input) {
 }
 
 
-void AM::Player::jump() {
+void AM::Player::m_jump() {
     m_engine->net->packet.prepare(AM::PacketID::PLAYER_JUMP);
     m_engine->net->packet.write<int>({ m_engine->net->player_id });
     m_engine->net->send_packet(AM::NetProto::UDP);
+
+    const float jump_force = m_engine->net->server_cfg.player_jump_force;
+
+    this->on_ground = false;
+    m_velocity.y += jump_force;
+    this->Y_pos_update_stack.clear();
 }
 
  
@@ -241,6 +266,48 @@ void AM::Player::update_camera() {
     AMutil::clamp<float>(m_camera_pitch, -1.5f, 1.5f);
 }
             
+void AM::Player::update_gravity() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+ 
+    const float player_cam_height = m_engine->net->server_cfg.player_cam_height;
+
+    if(this->on_ground) {
+        m_position.y = (m_terrain_surface_y - 0.1f) + player_cam_height;
+        m_velocity.y = 0;
+        return;
+    }
+        
+    const float frame_time = GetFrameTime();
+
+    m_position.y += m_velocity.y * frame_time;
+    m_velocity.y -= m_engine->net->server_cfg.gravity * frame_time;
+
+    if((m_position.y - (player_cam_height - 0.1f)) < m_terrain_surface_y) {
+        m_position.y = m_terrain_surface_y + player_cam_height;
+        m_velocity.y = 0;
+        this->on_ground = true;
+    }
+    /*
+    if(!this->on_ground) {
+        m_position.y += m_velocity.y * frame_time;
+
+        if(m_position.y < m_terrain_surface_y) {
+            m_position.y = m_terrain_surface_y;
+            m_velocity.y = 0;
+            this->on_ground = true;
+        }
+        else {
+            this->Y_pos_update_stack.push_front(m_position.y);
+            m_velocity.y -= m_engine->net->server_cfg.gravity * frame_time;
+        }
+    }
+    else {
+        m_velocity.y = 0;
+    }
+    */
+}
+
+
 void AM::Player::update_position_from_server() {
     if(!m_engine->ready) {
         return;
@@ -256,9 +323,6 @@ void AM::Player::update_position_from_server() {
 }
 
 void AM::Player::m_update_Y_axis_position() {
-    /*if(!this->on_ground) {
-        return;
-    }*/
 
     AM::Timer* ypos_interp_timer = m_engine->get_named_timer("PLAYER_YPOS_INTERP_TIMER");
     float interp_t = ypos_interp_timer->time_ms() / m_engine->net->get_packet_interval_ms(AM::PacketID::PLAYER_POSITION);
@@ -273,6 +337,7 @@ void AM::Player::m_update_Y_axis_position() {
 }
 
 void AM::Player::m_update_XZ_axis_position() {
+    printf("%s NOT IMPLEMENTED\n", __func__);
 }
 
 

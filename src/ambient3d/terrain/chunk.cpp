@@ -167,4 +167,16 @@ void AM::Chunk::render() {
     DrawMesh(m_mesh, *m_material, translation);
 }
 
+float AM::Chunk::get_height_at(const AM::iVec2& local_coords) {
+    if(!this->height_points) {
+        return 0.0f;
+    }
+    size_t idx = local_coords.y * (m_chunk_size+1) + local_coords.x;
+    if(idx >= ((m_chunk_size+1)*(m_chunk_size+1))) {
+        return 0.0f;
+    }
+    return this->height_points[idx];
+}
+
+
 

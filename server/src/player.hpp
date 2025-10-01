@@ -59,8 +59,6 @@ namespace AM {
             void update();  // < thread safe >
 
             std::atomic<bool> on_ground       { true };
-            std::atomic<bool> pos_xz_updated  { false };
-
 
         private:
 

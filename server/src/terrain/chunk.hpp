@@ -4,7 +4,7 @@
 #include "noise_generator.hpp"
 #include "server_config.hpp"
 #include "chunk_pos.hpp"
-#include "../ivec2.hpp"
+#include "ivec2.hpp"
 
 namespace AM {
 

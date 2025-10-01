@@ -11,7 +11,8 @@
 #include "chunk_pos.hpp"
 #include "networking_agreements.hpp"
 #include "raylib.h"
-
+#include "geometry/rect.hpp"
+#include "ivec2.hpp"
 
 namespace AM {
 
@@ -44,6 +45,15 @@ namespace AM {
             void unload_all_chunks();
             void unload_materials();
             void render();
+ 
+            AM::ChunkPos get_chunk_pos       (float world_x, float world_z);
+            AM::Rect     get_chunk_meshrect  (float world_x, float world_z, AM::iVec2 offset = {});
+            AM::Vec3     get_chunk_vertex    (float world_x, float world_z, AM::iVec2 offset = {});
+            float        get_surface_level   (const Vector3& world_pos);
+
+
+            // Returns X and Y in range of 0 to chunk size
+            AM::iVec2 get_chunk_local_coords(float world_x, float world_z); 
 
             bool chunkpos_in_renderdist(const AM::ChunkPos& origin, const AM::ChunkPos& chunk_pos);
 

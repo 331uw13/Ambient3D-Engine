@@ -6,8 +6,8 @@
 #include <functional>
 
 #include "chunk.hpp"
-#include "../ivec2.hpp"
-#include "../geometry/rect.hpp"
+#include "ivec2.hpp"
+#include "geometry/rect.hpp"
 
 
 namespace AM {

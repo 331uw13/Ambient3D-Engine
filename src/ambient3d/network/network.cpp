@@ -152,9 +152,9 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         memmove(&update_axis_flags, &data[byte_offset], sizeof(int));
         byte_offset += sizeof(int);
 
+
         m_engine->player.set_chunk_pos(AM::ChunkPos(chunk_x, chunk_z));
         m_engine->player.on_ground = (bool)std::clamp(on_ground, 0, 1);
-
 
         if(update_axis_flags != 0) {
             if((update_axis_flags & AM::FLG_PLAYER_UPDATE_XZ_AXIS)
@@ -179,42 +179,6 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
             m_engine->player.XZ_pos_update_stack.pop_back();
             m_engine->player.Y_pos_update_stack.pop_back();
         }
-
-        /*
-        if(update_axis_settings == AM::UPDATE_PLAYER_Y_AXIS) {
-            // Packet contains only Y
-            memmove(&position.y, &data[byte_offset], sizeof(float));
-            m_engine->player.Y_pos_update_stack.push_front(position.y);
-        }
-        else
-        if(update_axis_settings == AM::UPDATE_PLAYER_XYZ_AXIS
-        && (sizeb == AM::PacketSize::PLAYER_POSITION_MAX)) {
-            // Packet contains X,Y,Z
-            memmove(&position, &data[byte_offset], sizeof(Vector3));
-            m_engine->player.Y_pos_update_stack.push_front(position.y);
-            m_engine->player.XZ_pos_update_stack.push_front(Vector2(position.x, position.z));
-        }
-        */
-
-        /*
-        if(!update_xz_axis && on_ground) {
-        }
-        else
-        if (sizeb == AM::PacketSize::PLAYER_POSITION_MAX) {
-        }
-        else {
-            // Clear previous positions from the stack.
-            // They are no longer valid.
-        }
-        */
-
-        /*
-        else {
-            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
-                    "for PLAYER_POSITION (update_xz_axis == true)\n", sizeb);
-        }
-        */
-
     });
 
 

@@ -5,7 +5,7 @@
 
 #include "raylib.h"
 #include "chunk_pos.hpp"
-
+#include "ivec2.hpp"
 
 namespace AM {
 
@@ -20,7 +20,8 @@ namespace AM {
             bool is_loaded() { return m_loaded; }
 
             void render();
-
+            
+            float get_height_at(const AM::iVec2& local_coords);
 
         private:
 

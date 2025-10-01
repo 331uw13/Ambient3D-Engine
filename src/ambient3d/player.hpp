@@ -31,6 +31,9 @@ namespace AM {
             Vector3 velocity() const;                  // < thread safe >
             void    set_velocity(const Vector3& vel);  // < thread safe >
 
+            float   terrain_surface_y() const;         // < thread safe >
+            void    set_terrain_surface_y(float y);    // < thread safe >
+
             float   walking_speed() const;             // < thread safe >
             void    set_walking_speed(float speed);    // < thread safe >
 
@@ -65,9 +68,8 @@ namespace AM {
             void update_position_from_server();                  // < thread safe >
             void update_movement(bool handle_user_input = true); // < thread safe >
             void update_camera();                                // < thread safe >
-            void update_animation();
+            void update_gravity();                               // < thread safe >
 
-            void jump(); // < thread safe >
 
             std::atomic<bool> on_ground { false };
             std::atomic<bool> fully_connected { false };
@@ -93,6 +95,8 @@ namespace AM {
             // It is more safe to access these variables through
             // public set/get functions because they are thread safe.
 
+            //void m_update_animation();
+            void m_jump();
             Vector3 m_position { 0.0f, 0.0f, 0.0f };
             Vector3 m_velocity { 0.0f, 0.0f, 0.0f };
             float   m_camera_yaw { 0.0f };
@@ -101,9 +105,10 @@ namespace AM {
             Vector3 m_camera_right { 0.0f, 0.0f, 0.0f };
             Vector3 m_camera_forward { 0.0f, 0.0f, 0.0f };
             float m_movement_friction { 0.97f };   // TODO: Get this from server.
-            float m_walking_speed { 30.0f };      // TODO: Get this from server.
-            float m_running_speed { 800.0f };      // TODO: Get this from server.
+            float m_walking_speed { 30.0f };       // TODO: Get this from server.
+            float m_running_speed { 100.0f };      // TODO: Get this from server.
             float m_current_move_speed { 0.0f };
+            float m_terrain_surface_y { 0.0f };
             AM::AnimID m_animation_id { AM::AnimID::IDLE };
             void m_update_Y_axis_position();
             void m_update_XZ_axis_position();

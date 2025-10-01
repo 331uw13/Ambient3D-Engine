@@ -181,6 +181,8 @@ namespace AM {
         std::function<void(AM::State*)>  m_fast_fixed_tick_callback;
         void                             m_slow_fixed_tick_update();
         void                             m_fast_fixed_tick_update();
+        
+        void                             m_update_player();
 
         void                             m_update_gui_module_inputs();
         void                             m_create_internal_timers();

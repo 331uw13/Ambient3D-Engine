@@ -247,6 +247,7 @@ void AM::Server::m_send_player_updates() {
         player->update();
         m_send_player_position(player);
 
+
         for(auto itB = this->players.begin();
                 itB != this->players.end(); ++itB) {
             const Player* p = itB->second;
@@ -350,7 +351,7 @@ void AM::Server::m_send_player_chunk_updates() {
         (const AM::Chunk* chunk, const AM::ChunkPos& chunk_pos) {
         
             // Packets may be broken into few little bit smaller packets.
-            if(m_chunkdata_buf.size_inbytes() > 1024*32) {
+            if(m_chunkdata_buf.size_inbytes() >= AM::MAX_PACKET_SIZE) {
                 return; // TODO: return bool to continue loop or break.
             }
 

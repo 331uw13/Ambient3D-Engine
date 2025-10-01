@@ -3,6 +3,7 @@
 #include <cstdio>
 
 #include "terrain.hpp"
+#include "ray.hpp"
 #include "../ambient3d.hpp"
 
 
@@ -179,6 +180,116 @@ bool AM::Terrain::chunkpos_in_renderdist(const AM::ChunkPos& origin, const AM::C
     }
 
     return true;
+}
+
+AM::ChunkPos AM::Terrain::get_chunk_pos(float world_x, float world_z) {
+    return AM::ChunkPos(
+            (int)floor(world_x / (m_engine->net->server_cfg.chunk_size * m_engine->net->server_cfg.chunk_scale)),
+            (int)floor(world_z / (m_engine->net->server_cfg.chunk_size * m_engine->net->server_cfg.chunk_scale)));
+}
+
+
+AM::iVec2 AM::Terrain::get_chunk_local_coords(float world_x, float world_z) {
+    const int   chunk_size = m_engine->net->server_cfg.chunk_size;
+    const float chunk_scale = m_engine->net->server_cfg.chunk_scale;
+
+    int rx = (int)floor(world_x / chunk_scale);
+    int rz = (int)floor(world_z / chunk_scale);
+
+    // Return absolute x/z % chunk_size
+    return AM::iVec2(
+            (rx % chunk_size + chunk_size) % chunk_size,
+            (rz % chunk_size + chunk_size) % chunk_size);
+}
+
+            
+AM::Vec3 AM::Terrain::get_chunk_vertex(float world_x, float world_z, AM::iVec2 offset) {
+    const float chunk_scale = m_engine->net->server_cfg.chunk_scale;
+
+    world_x += offset.x * chunk_scale;
+    world_z += offset.y * chunk_scale;
+
+    auto chunk_search = this->chunk_map.find(this->get_chunk_pos(world_x, world_z));
+    if(chunk_search == this->chunk_map.end()) {
+        return AM::Vec3();
+    }
+
+    AM::Chunk& chunk = chunk_search->second;    
+    AM::iVec2 chunk_local_coords = this->get_chunk_local_coords(world_x, world_z);
+
+    const float chunk_vertex_y = chunk.get_height_at(chunk_local_coords);
+    const float chunk_vertex_x = floor(world_x / chunk_scale) * chunk_scale;
+    const float chunk_vertex_z = floor(world_z / chunk_scale) * chunk_scale;
+
+    return AM::Vec3(chunk_vertex_x, chunk_vertex_y, chunk_vertex_z);
+}
+
+AM::Rect AM::Terrain::get_chunk_meshrect(float world_x, float world_z, AM::iVec2 offset) {
+    const float chunk_scale = m_engine->net->server_cfg.chunk_scale;
+    world_x += offset.x * chunk_scale;
+    world_z += offset.y * chunk_scale;
+
+    AM::Vec3 vertex_A = this->get_chunk_vertex(world_x, world_z);
+    AM::Vec3 vertex_B = this->get_chunk_vertex(world_x, world_z, AM::iVec2(1, 0));
+    AM::Vec3 vertex_C = this->get_chunk_vertex(world_x, world_z, AM::iVec2(1, 1));
+    AM::Vec3 vertex_D = this->get_chunk_vertex(world_x, world_z, AM::iVec2(0, 1));
+
+    // This could be optimized to save memory because only 4 vertices are needed, 
+    // 2 of them are shared between the 2 triangles.
+    // It will waste some memory for now because it feels more easy.
+
+    return AM::Rect(
+                AM::Triangle(
+                    vertex_A,
+                    vertex_B,
+                    vertex_C
+                ),
+                AM::Triangle(
+                    vertex_D,
+                    vertex_A,
+                    vertex_C
+                )   
+            );
+}
+
+float AM::Terrain::get_surface_level(const Vector3& world_pos) {
+    
+    AM::Ray ray(
+            AM::Vec3(world_pos.x, world_pos.y+10.0f, world_pos.z), // Ray origin
+            AM::Vec3(0.0f, -1.0f, 0.0f));            // Ray direction
+
+    AM::RayHitResult hit_result = {};
+    AM::Rect rect = {};
+
+    // Check the most likely hit first.
+    rect = this->get_chunk_meshrect(world_pos.x, world_pos.z, AM::iVec2(0, 0));
+    hit_result = ray.rectangle_intersection(rect);
+   
+    if(!hit_result.hit) {
+        // The rectangle was not hit under the player, search bigger area.
+        // Resulting search area will be (AREA_HALF*2) * (AREA_HALF*2)
+        constexpr int AREA_HALF = 1;
+
+        for(int z = -AREA_HALF; z <= AREA_HALF; z++) {
+            for(int x = -AREA_HALF; x <= AREA_HALF; x++) {
+                rect = this->get_chunk_meshrect(world_pos.x, world_pos.z, AM::iVec2(x, z));
+                
+                hit_result = ray.triangle_intersection(rect.tA);
+                if(hit_result.hit) {
+                    goto loop_exit;
+                }
+
+                hit_result = ray.triangle_intersection(rect.tB);
+                if(hit_result.hit) {
+                    goto loop_exit;
+                }
+            }
+        }
+    }
+
+loop_exit:
+
+    return hit_result.point.y;
 }
 
 

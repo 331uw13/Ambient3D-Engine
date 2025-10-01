@@ -379,6 +379,15 @@ void AM::State::m_render_dropped_items() {
         item->renderable->render();
     }
 }
+
+void AM::State::m_update_player() {
+ 
+    this->player.set_terrain_surface_y(this->terrain.get_surface_level(this->player.position()));
+    this->player.update_position_from_server();
+    this->player.update_gravity();
+
+
+}
         
 void AM::State::frame_begin() {
     BeginTextureMode(m_render_targets[RenderTargetIDX::RESULT]);
@@ -388,8 +397,7 @@ void AM::State::frame_begin() {
     m_slow_fixed_tick_update();
     m_fast_fixed_tick_update();
     m_update_gui_module_inputs();
-    this->player.update_position_from_server();
-    
+    m_update_player();
     m_render_dropped_items();
 
     // TODO: Move these.
@@ -398,7 +406,7 @@ void AM::State::frame_begin() {
         this->player.update_camera();
     }
     this->player.update_movement(m_movement_enabled);
-    this->player.update_animation();
+    //this->player.update_animation();
 
     this->update_lights();
     this->terrain.render();

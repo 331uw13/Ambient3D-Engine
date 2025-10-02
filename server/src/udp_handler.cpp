@@ -106,7 +106,6 @@ void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {
 
                 player->on_ground = false;
                 player->set_position(player->position() + AM::Vec3(0.0f, 1.0f, 0.0f));
-                printf("[NETWORK]: Player(%i) jumped.\n", player_id);
             }
             break;
     }

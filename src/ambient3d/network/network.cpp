@@ -12,6 +12,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::CHAT_MESSAGE,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         (void)sizeb;
         if(!m_fully_connected) {
             return;
@@ -25,6 +26,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::SERVER_MESSAGE,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         (void)sizeb;
         if(!m_fully_connected) {
             return;
@@ -38,6 +40,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::PLAYER_ID,
     [this](float interval_ms, char* data, size_t sizeb) { 
+        (void)interval_ms;
         if(sizeb != sizeof(this->player_id)) {
             fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
                     "for PLAYER_ID\n", sizeb);
@@ -66,6 +69,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::PLAYER_ID_HAS_BEEN_SAVED,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         (void)data; (void)sizeb;
         m_msg_recv_callback(120, 255, 120, "Connected!");
     });
@@ -75,6 +79,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::SAVE_ITEM_LIST,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         (void)sizeb;
         printf("[NETWORK]: Received server item list.\n");
         printf("%s\n", data);
@@ -91,6 +96,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::SERVER_CONFIG,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         (void)sizeb;
         printf("[NETWORK]: Received server configuration.\n");
         this->server_cfg.parse_from_memory(json::parse(data));
@@ -113,6 +119,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     AM::NetProto::TCP,
     AM::PacketID::SERVER_GOT_CLIENT_CONFIG,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
         this->send_packet(AM::NetProto::TCP);
     });
@@ -124,6 +131,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
     AM::NetProto::UDP,
     AM::PacketID::PLAYER_POSITION,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         if(!m_fully_connected) {
             return;
         }
@@ -187,6 +195,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
     AM::NetProto::UDP,
     AM::PacketID::CHUNK_DATA,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         if(!m_fully_connected) {
             return;
         }
@@ -199,6 +208,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
     AM::NetProto::UDP,
     AM::PacketID::ITEM_UPDATE,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         if(!m_fully_connected) {
            return;
        }
@@ -256,6 +266,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
     AM::NetProto::UDP,
     AM::PacketID::PLAYER_MOVEMENT_AND_CAMERA,
     [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
         if(!m_fully_connected) {
             return;
         }
@@ -296,6 +307,48 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         this->players[player_id] = player;
     });
 
+    this->add_packet_callback(
+    AM::NetProto::UDP,
+    AM::PacketID::TIME_OF_DAY,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
+        if(sizeb != AM::PacketSize::TIME_OF_DAY) {
+            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
+                    "for TIME_OF_DAY\n", sizeb);
+            return;
+        }
+
+        float time_of_day = 0;
+        memmove(&time_of_day, data, sizeof(float));
+
+        this->dynamic_data.set_float(AM::NDD_ID::TIME_OF_DAY, time_of_day);
+    });
+
+    this->add_packet_callback(
+    AM::NetProto::UDP,
+    AM::PacketID::WEATHER_DATA,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
+        if(sizeb != AM::PacketSize::WEATHER_DATA) {
+            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
+                    "for WEATHER_DATA\n", sizeb);
+            return;
+        }
+
+        float fog_density;
+        float fog_color[3] = { 0, 0, 0 };
+
+        size_t byte_offset = 0;
+        
+        memmove(&fog_density, &data[byte_offset], sizeof(float));
+        byte_offset += sizeof(float);
+
+        memmove(&fog_color, &data[byte_offset], sizeof(float) * 3);
+        //byte_offset += sizeof(float);
+
+        this->dynamic_data.set_float(AM::NDD_ID::FOG_DENSITY, fog_density);
+        this->dynamic_data.set_vector3(AM::NDD_ID::FOG_COLOR, Vector3(fog_color[0], fog_color[1], fog_color[2]));
+    });
 }
 
 

@@ -14,6 +14,7 @@
 #include "packet_writer.hpp"
 #include "network_player.hpp"
 #include "server_config.hpp"
+#include "net_dynamic_data.hpp"
 #include "../item_manager.hpp"
 #include "../terrain/terrain.hpp"
 
@@ -74,6 +75,9 @@ namespace AM {
             Packet packet;
             void   send_packet(AM::NetProto proto);
 
+            // Handles settings/data which may change overtime 
+            // sent by the server.
+            AM::NetworkDynamicData  dynamic_data;  // < thread safe >
 
             std::mutex                                 players_mutex;
             std::map<int /*player_id*/, AM::N_Player>  players;

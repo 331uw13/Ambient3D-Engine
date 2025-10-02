@@ -19,6 +19,7 @@
 #include "terrain/terrain.hpp"
 #include "terrain/chunk_data.hpp"
 #include "timer.hpp"
+#include "fog.hpp"
 
 using json = nlohmann::json;
 using namespace asio::ip;
@@ -36,7 +37,6 @@ namespace AM {
             ~Server();
             
             ServerCFG config;
-
             void start(asio::io_context& io_context);
             
             std::map<int/*player_id*/, Player*> players;
@@ -50,10 +50,17 @@ namespace AM {
             std::unordered_map<int/*item uuid*/, AM::ItemBase> dropped_items;
             std::mutex                                         dropped_items_mutex;
 
+            // Time of day is in range of 0.0 to 1.0.
+            // 0.0 is mid night. 
+            // 0.5 is mid day. 
+            // 1.0 is mid night again.
+            float time_of_day;
+
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
 
             AM::Terrain terrain;
+            AM::Fog fog;
 
             void spawn_item(AM::ItemID item_id, int count, const Vec3& pos);
             void broadcast_msg(AM::PacketID packet_id, const std::string& str);
@@ -74,7 +81,9 @@ namespace AM {
             void         m_send_item_updates();
             void         m_send_player_chunk_updates();
             void         m_send_player_position(AM::Player* player);
-            void         m_update_player_gravity(AM::Player* player);
+            void         m_send_player_timeofday(AM::Player* player);
+            void         m_send_player_weather_data(AM::Player* player);
+            void         m_update_time_of_day(float update_interval_ms);
             void         m_process_resend_id_queue();
             void         m_read_terrain_config();
             

@@ -100,16 +100,8 @@ void main_loop(AM::State* st) {
 
     AM::Chatbox* chatbox = st->find_gui_module<AM::Chatbox>(AM::GuiModuleID::CHATBOX);
 
-
-
     while(!WindowShouldClose()) {
 
-        // TODO: Move these to engine side.
-        AM::set_uniform_vec3(st->shaders[AM::ShaderIDX::DEFAULT].id, "u_view_pos", st->player.position());
-        AM::set_uniform_float(st->shaders[AM::ShaderIDX::DEFAULT].id, "u_time", GetTime());
-        AM::set_uniform_vec3(st->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_view_pos", st->player.position());
-        AM::set_uniform_float(st->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_time", GetTime());
-      
         if(IsKeyPressed(KEY_TAB)) {
             st->set_gui_module_focus(AM::GuiModuleID::CHATBOX, AM::GuiModuleFocus::TOGGLE);
             st->set_mouse_enabled(!st->is_mouse_enabled());
@@ -119,13 +111,8 @@ void main_loop(AM::State* st) {
         if(IsKeyPressed(KEY_ENTER)) {
             if(chatbox->has_focus && !chatbox->text_input.empty()) {
                 st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
-                st->net->packet.write<std::string>({ chatbox->text_input });
+                st->net->packet.write_string({ chatbox->text_input });
                 st->net->send_packet(AM::NetProto::TCP);
-                /*
-                AM::packet_prepare(&st->net->packet, AM::PacketID::CHAT_MESSAGE);
-                AM::packet_write_string(&st->net->packet, chatbox->text_input);
-                st->net->send_packet(AM::NetProto::TCP);
-                */
                 chatbox->text_input.clear();
             }
         }

@@ -77,6 +77,9 @@ void AM::Server::start(asio::io_context& io_context) {
     m_udp_handler.start(this);
     m_do_accept_TCP();
 
+    this->fog.density = 0.005f;
+    this->fog.set_color(0.5f, 0.5f, 0.5f);
+
     this->terrain.set_server(this);
 
     // Set random seed to current time.
@@ -231,6 +234,23 @@ void AM::Server::m_send_player_position(AM::Player* player) {
     m_udp_handler.send_packet(player->id());
 }
  
+            
+void AM::Server::m_send_player_timeofday(AM::Player* player) {
+    m_udp_handler.packet.prepare(AM::PacketID::TIME_OF_DAY);
+    m_udp_handler.packet.write<float>({ this->time_of_day });
+    m_udp_handler.send_packet(player->id());
+}
+            
+void AM::Server::m_send_player_weather_data(AM::Player* player) {
+    m_udp_handler.packet.prepare(AM::PacketID::WEATHER_DATA);
+    m_udp_handler.packet.write<float>({
+            fog.density,
+            fog.color_r,
+            fog.color_g,
+            fog.color_b
+    });
+    m_udp_handler.send_packet(player->id());
+}
 
 void AM::Server::m_send_player_updates() {
 
@@ -243,15 +263,24 @@ void AM::Server::m_send_player_updates() {
     for(auto itA = this->players.begin();
             itA != this->players.end(); ++itA) {
         Player* player = itA->second;
+        if(!player->tcp_session->is_fully_connected()) {
+            continue;
+        }
 
         player->update();
         m_send_player_position(player);
-
+        m_send_player_timeofday(player);
+        m_send_player_weather_data(player);
 
         for(auto itB = this->players.begin();
                 itB != this->players.end(); ++itB) {
             const Player* p = itB->second;
-            if(p->id() == player->id()) { continue; }
+            if(!p->tcp_session->is_fully_connected()) {
+                continue;
+            }
+            if(p->id() == player->id()) {
+                continue;
+            }
 
             AM::Vec3 player_pos = player->position();
 
@@ -423,6 +452,15 @@ void AM::Server::m_process_resend_id_queue() {
     this->resend_player_id_queue.clear();
 }
 
+
+void AM::Server::m_update_time_of_day(float update_interval_ms) {
+    this->time_of_day += update_interval_ms / (this->config.day_cycle_in_minutes * 60.0f);
+    if(this->time_of_day >= 1.0f) {
+        this->time_of_day = 0.0f;
+    }
+}
+
+
 void AM::Server::m_update_loop_th__func() {
     while(m_keep_threads_alive) {
         m_tick_timer.start();
@@ -442,6 +480,8 @@ void AM::Server::m_update_loop_th__func() {
                     std::chrono::duration_cast<std::chrono::milliseconds>
                     (std::chrono::duration<double, std::milli>(this->config.tick_delay_ms - delta_time_ms)));
         }
+
+        m_update_time_of_day(delta_time_ms);
     }
 }
 

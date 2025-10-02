@@ -28,6 +28,7 @@ namespace AM {
         float gravity;
         float player_jump_force;
         float player_cam_height;
+        int day_cycle_in_minutes;
         std::string json_data;
 
     };

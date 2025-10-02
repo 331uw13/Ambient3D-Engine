@@ -1,7 +1,7 @@
 #include "ambient3d.hpp"
 #include "internal_shaders.hpp"
 #include "util.hpp"
-
+#include "rlgl.h"
 
 AM::State::State(
         uint16_t win_width,
@@ -51,10 +51,15 @@ AM::State::State(
 
 
 
-    GLSL_preproc_add_meminclude("GLSL_VERSION", "#version 430\n");
-    GLSL_preproc_add_meminclude("AMBIENT3D_LIGHTS", I_Shaders::LIGHTS_GLSL);
+    GLSL_preproc_add_meminclude("GLSL_VERSION", AM::ShaderCode::get(AM::ShaderCode::GLSL_VERSION));
+    GLSL_preproc_add_meminclude("AMBIENT3D_LIGHTS", AM::ShaderCode::get(AM::ShaderCode::LIGHTS_GLSL));
+    GLSL_preproc_add_meminclude("AMBIENT3D_FOG", AM::ShaderCode::get(AM::ShaderCode::FOG_GLSL));
 
     SetTraceLogLevel(LOG_ALL);
+
+
+    // Create skybox.
+    m_skybox_model = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 16));
 
 
     // TODO: Adding shaders to the vector like this
@@ -62,40 +67,48 @@ AM::State::State(
 
     // DEFAULT
     this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
-                GLSL_preproc(I_Shaders::DEFAULT_FRAGMENT).c_str()
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_FRAGMENT)).c_str()
                 ));
-
+/*
     // DEFAULT_INSTANCED
     this->add_shader(LoadShaderFromMemory(
                 GLSL_preproc(I_Shaders::DEFAULT_VERTEX, PREPROC_FLAGS::DEFINE__RENDER_INSTANCED).c_str(),
                 GLSL_preproc(I_Shaders::DEFAULT_FRAGMENT).c_str()
                 ));
+*/
+    // DEFAULT_INSTANCED
+    this->add_shader(LoadShaderFromMemory(
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX), 
+                        PREPROC_FLAGS::DEFINE__RENDER_INSTANCED).c_str(),
+
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_FRAGMENT)).c_str()
+                ));
+
     AM::init_instanced_shader(&this->shaders.back());
     
-
     // POST-PROCESSING
     this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
-                GLSL_preproc(I_Shaders::POSTPROCESS_FRAGMENT).c_str()
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::POSTPROCESS_FRAGMENT)).c_str()
                 ));
  
     // BLOOM_TRESHOLD
     this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
-                GLSL_preproc(I_Shaders::BLOOM_TRESH_FRAGMENT).c_str()
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_TRESH_FRAGMENT)).c_str()
                 ));  
 
     // BLOOM_DOWNSAMPLE_FRAGMENT
     this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
-                GLSL_preproc(I_Shaders::BLOOM_DOWNSAMPLE_FRAGMENT).c_str()
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_DOWNSAMPLE_FRAGMENT)).c_str()
                 ));  
 
     // BLOOM_UPSAMPLE_FRAGMENT
     this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX).c_str(),
-                GLSL_preproc(I_Shaders::BLOOM_UPSAMPLE_FRAGMENT).c_str()
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_UPSAMPLE_FRAGMENT)).c_str()
                 ));  
 
 
@@ -357,6 +370,10 @@ void AM::State::draw_info() {
     text_y += y_add;
     draw_text(font_size, TextFormat("MouseEnabled = %s", m_mouse_enabled ? "Yes" : "No"),
             text_x, text_y, WHITE);
+    text_y += y_add;
+    draw_text(font_size, TextFormat("TimeOfDay = %f", this->net->dynamic_data.get_float(AM::NDD_ID::TIME_OF_DAY)),
+            text_x, text_y, WHITE);
+    text_y += y_add;
 
 }
 
@@ -388,11 +405,62 @@ void AM::State::m_update_player() {
 
 
 }
-        
+
+void AM::State::m_set_shader_uniforms() {
+    const Vector3 player_pos = this->player.position();
+    const float time = GetTime();
+    const float timeofday = this->net->dynamic_data.get_float(AM::NDD_ID::TIME_OF_DAY);
+    const float fog_density = this->net->dynamic_data.get_float(AM::NDD_ID::FOG_DENSITY);
+    const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
+
+    AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_view_pos", player_pos);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_timeofday", timeofday);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_time", time);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_fog_density", fog_density);
+    AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_fog_color", fog_color);
+
+    AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_view_pos", player_pos);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_timeofday", timeofday);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_time", time);
+}
+
+/*
+void AM::State::m_setframe_background_color() {
+    const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
+    ClearBackground(Color(
+                (unsigned char)((fog_color.x * 0.5f) * 255.0f),
+                (unsigned char)((fog_color.y * 0.5f) * 255.0f),
+                (unsigned char)((fog_color.z * 0.5f) * 255.0f),
+                255
+    ));
+}
+*/
+
+            
+void AM::State::m_render_skybox() {
+    const Vector3 player_pos = this->player.position();
+    const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
+    rlDisableDepthMask();
+    rlDisableBackfaceCulling();
+    DrawModel(m_skybox_model, player_pos, 1.0f, Color(
+            (unsigned char)((fog_color.x*0.5f) * 255.0f),
+            (unsigned char)((fog_color.y*0.5f) * 255.0f),
+            (unsigned char)((fog_color.z*0.5f) * 255.0f),
+            255
+    ));
+    rlEnableDepthMask();
+    rlEnableBackfaceCulling();
+}
+
+
 void AM::State::frame_begin() {
+    m_set_shader_uniforms();
+
     BeginTextureMode(m_render_targets[RenderTargetIDX::RESULT]);
     ClearBackground(BLACK);
     BeginMode3D(this->player.camera);
+
+    m_render_skybox();
 
     m_slow_fixed_tick_update();
     m_fast_fixed_tick_update();

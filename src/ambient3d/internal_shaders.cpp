@@ -1,35 +1,17 @@
-#ifndef AMBIENT3D_INTERNAL_SHADERS_HPP
-#define AMBIENT3D_INTERNAL_SHADERS_HPP
-
-#include <string>
+#include "internal_shaders.hpp"
 
 
-namespace AM {
-    namespace ShaderCode {
 
-        enum GLSL_CodeID {
-            GLSL_VERSION,
-            DEFAULT_VERTEX,
-            DEFAULT_FRAGMENT,
-            FOG_GLSL,
-            LIGHTS_GLSL,
-            POSTPROCESS_FRAGMENT,
-            BLOOM_TRESH_FRAGMENT,
-            BLOOM_DOWNSAMPLE_FRAGMENT,
-            BLOOM_UPSAMPLE_FRAGMENT
-        };
+        
+std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
 
-        std::string get(GLSL_CodeID codeid);
+    switch(codeid) {
 
-        //AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX);
+        case AM::ShaderCode::GLSL_VERSION:
+            return "#version 430\n";
 
-        /*
-        static constexpr const char*
-            GLSL_VERSION = "#version 430\n";
-
-        static constexpr const char*
-            DEFAULT_VERTEX = R"(
-
+        case AM::ShaderCode::DEFAULT_VERTEX:
+            return R"(
             #include @GLSL_VERSION
 
             in vec3 vertexPosition;
@@ -74,12 +56,10 @@ namespace AM {
                     gl_Position = mvp * vec4(vertex_pos, 1.0);
                 #endif
             }
-
             )";
 
-
-        static constexpr const char*
-            DEFAULT_FRAGMENT = R"(
+        case AM::ShaderCode::DEFAULT_FRAGMENT:
+            return R"(
             #include @GLSL_VERSION
             #include @AMBIENT3D_LIGHTS
             #include @AMBIENT3D_FOG
@@ -96,6 +76,8 @@ namespace AM {
             uniform float u_material_shine_level;
             uniform float u_material_specular;
             uniform float u_timeofday;
+            uniform float u_fog_density;
+            uniform vec3 u_fog_color;
 
             out vec4 out_color;
 
@@ -111,7 +93,7 @@ namespace AM {
                 );
 
                 float timeofday_curve = get_timeofday_curve(u_timeofday);
-                vec3 sun_direction = vec3(0.0, -1.0, 0.0);
+                vec3 sun_direction = vec3(0.5, -1.0, 0.5);
 
                 lights += compute_sun(
                     frag_position,
@@ -122,12 +104,19 @@ namespace AM {
                     vec3(1.0, 0.9, 0.75)
                 );
                 out_color = (tex * colDiffuse) * vec4(lights, 1.0);
+
+                out_color.rgb = add_fog(
+                    out_color.rgb,
+                    frag_position,
+                    u_view_pos,
+                    u_fog_color,
+                    u_fog_density
+                );
             }
             )";
 
-        static constexpr const char*
-            FOG_GLSL = R"(
-
+        case AM::ShaderCode::FOG_GLSL:
+            return R"(
             // Returns new RGB for pixel.
             vec3 add_fog(
                 vec3 current_color,
@@ -139,12 +128,12 @@ namespace AM {
                 float dist = fog_density * distance(view_pos, frag_pos);
                 float t = 1.0/exp(dist * dist);
 
-                return mix(current_color, fog_color, t);
+                return mix(fog_color*0.5, current_color, t);
             }
             )";
 
-        static constexpr const char*
-            LIGHTS_GLSL = R"(
+        case AM::ShaderCode::LIGHTS_GLSL:
+            return R"(
             #define MAX_LIGHTS 64
 
             struct Light {
@@ -176,10 +165,13 @@ namespace AM {
                 vec3 sun_color
             ){
                 vec3 normal = normalize(frag_normal);
-                float t = dot(normal, sun_direction);
+                float t = dot(normal, normalize(-sun_direction));
                 t = clamp(t, 0.0, 1.0);
 
-                return mix(sun_color, vec3(0.0, 0.0, 0.0), t)/5.0f;
+                vec3 color = vec3(t) * sun_color;  // Diffuse
+                color += sun_color / 8.0;          // Ambient.
+
+                return (color/5.0f) * timeofday_curve;
             }
 
             // Returns RGB.
@@ -229,11 +221,10 @@ namespace AM {
 
                 return clamp(final, vec3(0), vec3(1));
             }
-
             )";
 
-        static constexpr const char*
-            POSTPROCESS_FRAGMENT = R"(
+        case AM::ShaderCode::POSTPROCESS_FRAGMENT:
+            return R"(
             #include @GLSL_VERSION
             
             in vec2 frag_texcoord;
@@ -300,8 +291,8 @@ namespace AM {
             }
             )";
 
-        static constexpr const char*
-            BLOOM_TRESH_FRAGMENT = R"(
+        case AM::ShaderCode::BLOOM_TRESH_FRAGMENT:
+            return R"(
             #include @GLSL_VERSION
             
             in vec2 frag_texcoord;
@@ -324,8 +315,8 @@ namespace AM {
             }
             )";
 
-        static constexpr const char*
-            BLOOM_DOWNSAMPLE_FRAGMENT = R"(
+        case AM::ShaderCode::BLOOM_DOWNSAMPLE_FRAGMENT:
+            return R"(
             #include @GLSL_VERSION
             
             in vec2 frag_texcoord;
@@ -366,8 +357,8 @@ namespace AM {
             }
             )";
 
-        static constexpr const char*
-            BLOOM_UPSAMPLE_FRAGMENT = R"(
+        case AM::ShaderCode::BLOOM_UPSAMPLE_FRAGMENT:
+            return R"(
             #include @GLSL_VERSION
             
             in vec2 frag_texcoord;
@@ -409,15 +400,14 @@ namespace AM {
                 result /= sum;
                 out_color = vec4(result, 1.0);
             }
+ 
             )";
-        */
+    }
 
-    };
-};
-
-
+    return "";
+}
 
 
 
 
-#endif
+

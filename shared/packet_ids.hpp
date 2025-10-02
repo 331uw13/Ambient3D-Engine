@@ -209,6 +209,28 @@ namespace AM {
         ITEM_UPDATE, // (udp only)
       
 
+        // Server sends players the in game time of day.
+        // It is in range of: 0.0 to 1.0f
+        // 0.0 is mid night. 
+        // 0.5 is mid day. 
+        // 1.0 is mid night again.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Time of day      (float)
+        TIME_OF_DAY,
+
+        // Server sends players the weather data.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Fog density      (float)
+        // 8            :  Fog Color R      (float)
+        // 12           :  Fog Color G      (float)
+        // 16           :  Fog Color B      (float)
+        WEATHER_DATA,
 
         NUM_PACKETS
     };
@@ -222,6 +244,8 @@ namespace AM {
         static constexpr size_t PLAYER_POSITION_MAX = 28;
         static constexpr size_t PLAYER_UNLOADED_CHUNKS_MIN = 8;
         static constexpr size_t PLAYER_JUMP = 4;
+        static constexpr size_t TIME_OF_DAY = 4;
+        static constexpr size_t WEATHER_DATA = 16;
     };
 };
 

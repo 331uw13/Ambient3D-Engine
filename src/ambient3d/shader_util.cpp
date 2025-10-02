@@ -1,5 +1,5 @@
-#include <map>
 #include <cstdio>
+#include <unordered_map>
 
 #include "raylib.h"
 
@@ -9,7 +9,7 @@
 
 namespace {
     //         shader id,    uniform name,   uniform location
-    static std::map<int, std::map<const char*, int>>
+    static std::unordered_map<int, std::unordered_map<const char*, int>>
         g_shader_map;
 
     static constexpr int LOCATION_NOTFOUND = -1;
@@ -21,7 +21,7 @@ namespace {
         if((search0 == g_shader_map.end())
         || (search0->second.find(u_name) == search0->second.end())) {
             location = glGetUniformLocation(shader_id, u_name);
-            printf("Found uniform \"%s\" (%i)\n", u_name, location);
+            printf("[SHADERS]: Found uniform \"%s\" (%i)\n", u_name, location);
             g_shader_map[shader_id].insert(std::make_pair(u_name, location));
         }
         else {

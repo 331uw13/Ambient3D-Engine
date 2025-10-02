@@ -162,44 +162,47 @@ namespace AM {
                 NUM_TARGETS
             };
 
+            Model m_skybox_model;
 
-        std::unordered_map<std::string, std::shared_ptr<AM::Timer>, 
-            AM::TransparentStringHash, std::equal_to<>> m_named_timers;
-        std::mutex                                      m_named_timers_mutex;
+            std::unordered_map<std::string, std::shared_ptr<AM::Timer>, 
+                AM::TransparentStringHash, std::equal_to<>> m_named_timers;
+            std::mutex                                      m_named_timers_mutex;
 
-        std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
-            m_render_targets;
+            std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
+                m_render_targets;
 
-        std::array<RenderTexture2D, NUM_BLOOM_SAMPLES>
-            m_bloom_samples;
+            std::array<RenderTexture2D, NUM_BLOOM_SAMPLES>
+                m_bloom_samples;
 
-        void                             m_render_dropped_items();
+            void                             m_render_dropped_items();
+            void                             m_render_skybox();
 
-        //float                            m_fixed_tick_timer         { 0.0f };
-        //float                            m_fixed_tick_delay         { 0.075f };
-        std::function<void(AM::State*)>  m_slow_fixed_tick_callback;
-        std::function<void(AM::State*)>  m_fast_fixed_tick_callback;
-        void                             m_slow_fixed_tick_update();
-        void                             m_fast_fixed_tick_update();
-        
-        void                             m_update_player();
+            //float                            m_fixed_tick_timer         { 0.0f };
+            //float                            m_fixed_tick_delay         { 0.075f };
+            std::function<void(AM::State*)>  m_slow_fixed_tick_callback;
+            std::function<void(AM::State*)>  m_fast_fixed_tick_callback;
+            void                             m_slow_fixed_tick_update();
+            void                             m_fast_fixed_tick_update();
+            void                             m_set_shader_uniforms();
 
-        void                             m_update_gui_module_inputs();
-        void                             m_create_internal_timers();
+            void                             m_update_player();
 
-        // TODO Maybe move this away from State class
-        void m_render_bloom();
+            void                             m_update_gui_module_inputs();
+            void                             m_create_internal_timers();
+
+            // TODO Maybe move this away from State class
+            void m_render_bloom();
 
     
 
-        UniformBuffer m_lights_ubo;
-        std::array<Light, MAX_LIGHTS> m_lights;
-        std::array<Light*, MAX_LIGHTS> m_light_ptrs { NULL };
-        size_t m_num_lights { 0 };
+            UniformBuffer m_lights_ubo;
+            std::array<Light, MAX_LIGHTS> m_lights;
+            std::array<Light*, MAX_LIGHTS> m_light_ptrs { NULL };
+            size_t m_num_lights { 0 };
 
-        int64_t                                 m_focused_gui_module_idx { -1 };
-        std::vector<std::unique_ptr<GuiModule>> m_gui_modules;
-        std::map<int/*light ID*/, Light>        m_lights_pframe_map; // Previous frame lights.
+            int64_t                                 m_focused_gui_module_idx { -1 };
+            std::vector<std::unique_ptr<GuiModule>> m_gui_modules;
+            std::map<int/*light ID*/, Light>        m_lights_pframe_map; // Previous frame lights.
        
 
 

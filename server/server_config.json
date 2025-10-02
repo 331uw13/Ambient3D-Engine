@@ -12,5 +12,6 @@
     "render_distance": 12,
     "chunk_size": 16,
     "chunk_scale": 4.0,
+    "day_cycle_in_minutes": 5,
     "chunkdata_uncompressed_max_bytes": 64000
 }

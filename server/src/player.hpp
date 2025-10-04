@@ -8,6 +8,8 @@
 #include "tcp_session.hpp"
 #include "vec3.hpp"
 #include "terrain/chunk.hpp"
+#include "inventory.hpp"
+
 
 
 namespace AM {
@@ -21,14 +23,18 @@ namespace AM {
             std::shared_ptr<AM::TCP_session> tcp_session;
             std::unordered_map<AM::ChunkPos, bool> loaded_chunks;
 
+            void free_memory();
+
             void set_server(AM::Server* server) { 
                 m_server = server;
             }
 
+            AM::Inventory inventory;
+
             int id() const;                      // < thread safe >
             void set_id(int id);                 // < thread safe >
             
-            float cam_yaw()const ;               // < thread safe >
+            float cam_yaw() const;               // < thread safe >
             void set_cam_yaw(float yaw);         // < thread safe >
 
             float cam_pitch() const;             // < thread safe >

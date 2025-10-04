@@ -54,7 +54,7 @@ namespace AM {
             // 0.0 is mid night. 
             // 0.5 is mid day. 
             // 1.0 is mid night again.
-            float time_of_day;
+            float timeofday;
 
             void        remove_player     (int player_id);
             AM::Player* get_player_by_id  (int player_id);
@@ -81,9 +81,8 @@ namespace AM {
             void         m_send_item_updates();
             void         m_send_player_chunk_updates();
             void         m_send_player_position(AM::Player* player);
-            void         m_send_player_timeofday(AM::Player* player);
             void         m_send_player_weather_data(AM::Player* player);
-            void         m_update_time_of_day(float update_interval_ms);
+            void         m_update_timeofday(float update_interval_ms);
             void         m_process_resend_id_queue();
             void         m_read_terrain_config();
             
@@ -94,7 +93,8 @@ namespace AM {
 
             void         m_update_loop_th__func();
             std::thread  m_update_loop_th;
-            AM::Timer    m_tick_timer;
+            AM::Timer    m_update_timer; // Measures time how long update took for the tick.
+            AM::Timer    m_tick_timer;   // Measures how long the tick was.
 
             void         m_worldgen_th__func();
             std::thread  m_worldgen_th;

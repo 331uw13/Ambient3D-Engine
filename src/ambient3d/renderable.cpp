@@ -117,6 +117,7 @@ void AM::Renderable::mesh_attribute(size_t mesh_index, const MeshAttrib& mesh_at
     m_mesh_attribs[mesh_index] = mesh_attrib;
 }
 
+            
 void AM::Renderable::render() {
     if(!m_loaded) { return; }
 
@@ -135,12 +136,13 @@ void AM::Renderable::render() {
         AM::set_uniform_int(mat.shader.id, "u_affected_by_wind", mesh_attr.affected_by_wind);
         AM::set_uniform_float(mat.shader.id, "u_material_shine_level", mesh_attr.shine);
         AM::set_uniform_float(mat.shader.id, "u_material_specular", mesh_attr.specular);
-        
-        DrawMesh(m_model.meshes[i], mat, 
-                (this->mesh_transforms == NULL) 
-                ? m_model.transform
-                : MatrixMultiply(this->mesh_transforms[i], m_model.transform)
-                );
+
+        Matrix mesh_transform =
+            (this->mesh_transforms == NULL) 
+            ? m_model.transform
+            : MatrixMultiply(this->mesh_transforms[i], m_model.transform);
+
+        DrawMesh(m_model.meshes[i], mat, mesh_transform);
         
         AM::set_uniform_float(mat.shader.id, "u_material_shine_level", MATERIAL_DEFAULT_SHINE);
         AM::set_uniform_float(mat.shader.id, "u_material_specular", MATERIAL_DEFAULT_SPECULAR);

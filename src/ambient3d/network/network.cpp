@@ -115,14 +115,39 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         m_fully_connected = true;
     });
 
+    /*
     this->add_packet_callback(
     AM::NetProto::TCP,
     AM::PacketID::SERVER_GOT_CLIENT_CONFIG,
     [this](float interval_ms, char* data, size_t sizeb) {
         (void)interval_ms;
+    });
+    */
+
+    this->add_packet_callback(
+    AM::NetProto::TCP,
+    AM::PacketID::TIMEOFDAY_SYNC,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
+        if(sizeb != AM::PacketSize::TIMEOFDAY_SYNC) {
+            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
+                    "for TIMEOFDAY_SYNC\n", sizeb);
+            return;
+        }
+
+        float timeofday_sync = 0.0f;
+        memmove(&timeofday_sync, data, sizeof(float));
+
+
+        this->dynamic_data.set_float(AM::NDD_ID::TIMEOFDAY_SYNC, timeofday_sync);
+        this->needto_sync_timeofday = true;
+        
         this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
         this->send_packet(AM::NetProto::TCP);
+        
+        printf("[NETWORK]: Received timeofday sync: %f\n", timeofday_sync);
     });
+
 }
 
 
@@ -305,23 +330,6 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         // Insert player data if not in hashmap
         // or replace existing one.
         this->players[player_id] = player;
-    });
-
-    this->add_packet_callback(
-    AM::NetProto::UDP,
-    AM::PacketID::TIME_OF_DAY,
-    [this](float interval_ms, char* data, size_t sizeb) {
-        (void)interval_ms;
-        if(sizeb != AM::PacketSize::TIME_OF_DAY) {
-            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
-                    "for TIME_OF_DAY\n", sizeb);
-            return;
-        }
-
-        float time_of_day = 0;
-        memmove(&time_of_day, data, sizeof(float));
-
-        this->dynamic_data.set_float(AM::NDD_ID::TIME_OF_DAY, time_of_day);
     });
 
     this->add_packet_callback(

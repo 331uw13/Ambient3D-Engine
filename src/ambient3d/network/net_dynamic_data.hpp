@@ -14,13 +14,12 @@
 
 namespace AM {
 
-    // Stand for "Network Dynamic Data ID"
-
+    // Stands for "Network Dynamic Data ID"
     namespace NDD_ID {
         enum : uint32_t {
-            TIME_OF_DAY = 0,   // float
-            FOG_DENSITY,       // float
+            FOG_DENSITY=0,     // float
             FOG_COLOR,         // vector3
+            TIMEOFDAY_SYNC,    // float
             //...
 
             NUM_IDS,

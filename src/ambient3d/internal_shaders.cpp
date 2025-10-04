@@ -75,7 +75,7 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
             uniform vec3 u_view_pos;
             uniform float u_material_shine_level;
             uniform float u_material_specular;
-            uniform float u_timeofday;
+            uniform float u_timeofday_curve;
             uniform float u_fog_density;
             uniform vec3 u_fog_color;
 
@@ -92,14 +92,13 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
                     u_material_specular
                 );
 
-                float timeofday_curve = get_timeofday_curve(u_timeofday);
                 vec3 sun_direction = vec3(0.5, -1.0, 0.5);
 
                 lights += compute_sun(
                     frag_position,
                     frag_normal,
                     u_view_pos,
-                    timeofday_curve,
+                    u_timeofday_curve,
                     sun_direction,
                     vec3(1.0, 0.9, 0.75)
                 );
@@ -110,10 +109,56 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
                     frag_position,
                     u_view_pos,
                     u_fog_color,
-                    u_fog_density
+                    u_fog_density,
+                    u_timeofday_curve
                 );
             }
             )";
+
+        case AM::ShaderCode::SKYBOX_FRAGMENT:
+            return R"(
+            #include @GLSL_VERSION
+            #include @AMBIENT3D_LIGHTS
+            #include @AMBIENT3D_FOG
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+
+            uniform sampler2D texture0;
+            uniform vec4 colDiffuse;
+            uniform float u_timeofday_curve;
+            uniform vec3 u_fog_color;
+
+            out vec4 out_color;
+
+            void main() {
+                out_color = vec4((u_fog_color*0.5)*u_timeofday_curve, 1.0);
+            }
+            )";
+
+        case AM::ShaderCode::SINGLECOLOR_FRAGMENT:
+            return R"(
+            #include @GLSL_VERSION
+            #include @AMBIENT3D_LIGHTS
+            #include @AMBIENT3D_FOG
+            
+            in vec2 frag_texcoord;
+            in vec4 frag_color;
+            in vec3 frag_normal;
+            in vec3 frag_position;
+
+            uniform vec4 u_color;
+
+            out vec4 out_color;
+
+            void main() {
+                out_color = u_color;
+            }
+            )";
+
 
         case AM::ShaderCode::FOG_GLSL:
             return R"(
@@ -123,12 +168,13 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
                 vec3 frag_pos,
                 vec3 view_pos,
                 vec3 fog_color,
-                float fog_density) {
+                float fog_density,
+                float timeofday_curve) {
 
                 float dist = fog_density * distance(view_pos, frag_pos);
                 float t = 1.0/exp(dist * dist);
 
-                return mix(fog_color*0.5, current_color, t);
+                return mix(timeofday_curve*(fog_color*0.5), current_color, t);
             }
             )";
 
@@ -146,14 +192,6 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
                 Light lights[MAX_LIGHTS];
                 int num_lights;
             };
-
-            // When raw_timeofday is 0.0 (mid night) OR 1.0 (mid night)
-            // return value is 0.0
-            // but when raw_timeofday is 0.5(mid day) return value will be 1.0.
-            // This makes it easier to use and smooths out the cycle.
-            float get_timeofday_curve(float raw_timeofday) {
-                return (1.0-cos(2.0*(raw_timeofday*3.14159)))*0.5;
-            }
 
             // Returns RGB.
             vec3 compute_sun(

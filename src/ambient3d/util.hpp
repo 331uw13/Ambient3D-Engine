@@ -37,10 +37,9 @@ namespace AMutil {
     // If 'shader_idx' < 0: Default shader is used.
     // If dimensions are negative the corresponding texture dimensions are used.
     void resample_texture(
-            AM::State* st,
             RenderTexture2D to,
             RenderTexture2D from,
-            int shader_idx,
+            const Shader* shader,
 
             int src_width = -1,
             int src_height = -1,

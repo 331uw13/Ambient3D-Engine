@@ -59,18 +59,17 @@ std::string AMutil::combine_files(std::initializer_list<const char*> filenames) 
 
 
 void AMutil::resample_texture(
-        AM::State* st,
         RenderTexture2D to,
         RenderTexture2D from,
-        int shader_idx,
+        const Shader* shader,
         int src_width, int src_height,
         int dst_width, int dst_height
 ){
     BeginTextureMode(to);
     ClearBackground(Color(0, 0, 0, 0));
 
-    if(shader_idx >= 0) {
-        BeginShaderMode(st->shaders[shader_idx]);
+    if(shader) {
+        BeginShaderMode(*shader);
     }
 
     if(src_width < 0)  { src_width = from.texture.width;    }
@@ -84,9 +83,10 @@ void AMutil::resample_texture(
             (Rectangle){ 0, 0, (float)dst_width, (float)-dst_height },
             (Vector2){ 0, 0 }, 0, WHITE);
 
-    if(shader_idx >= 0) {
+    if(shader) {
         EndShaderMode();
     }
+
     EndTextureMode();
 }
 

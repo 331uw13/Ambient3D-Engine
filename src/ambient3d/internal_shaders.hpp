@@ -16,7 +16,9 @@ namespace AM {
             POSTPROCESS_FRAGMENT,
             BLOOM_TRESH_FRAGMENT,
             BLOOM_DOWNSAMPLE_FRAGMENT,
-            BLOOM_UPSAMPLE_FRAGMENT
+            BLOOM_UPSAMPLE_FRAGMENT,
+            SKYBOX_FRAGMENT,
+            SINGLECOLOR_FRAGMENT,
         };
 
         std::string get(GLSL_CodeID codeid);

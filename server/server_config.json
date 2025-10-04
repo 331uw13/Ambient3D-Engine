@@ -6,12 +6,17 @@
 
     "tick_delay_ms": 50.0,
     "gravity": 80.0,
-    "player_jump_force": 30.0,
-    "player_camera_height": 2.0,
     "item_near_distance": 100.0,
+    "item_pickup_distance": 5.0,
     "render_distance": 12,
     "chunk_size": 16,
     "chunk_scale": 4.0,
     "day_cycle_in_minutes": 5,
+    "player_jump_force": 30.0,
+    "player_camera_height": 2.0,
+    "player_default_inventory_size": { 
+        "width": 8, 
+        "height": 4
+    },
     "chunkdata_uncompressed_max_bytes": 64000
 }

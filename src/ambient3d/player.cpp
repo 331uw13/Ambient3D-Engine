@@ -287,24 +287,6 @@ void AM::Player::update_gravity() {
         m_velocity.y = 0;
         this->on_ground = true;
     }
-    /*
-    if(!this->on_ground) {
-        m_position.y += m_velocity.y * frame_time;
-
-        if(m_position.y < m_terrain_surface_y) {
-            m_position.y = m_terrain_surface_y;
-            m_velocity.y = 0;
-            this->on_ground = true;
-        }
-        else {
-            this->Y_pos_update_stack.push_front(m_position.y);
-            m_velocity.y -= m_engine->net->server_cfg.gravity * frame_time;
-        }
-    }
-    else {
-        m_velocity.y = 0;
-    }
-    */
 }
 
 
@@ -312,6 +294,8 @@ void AM::Player::update_position_from_server() {
     if(!m_engine->ready) {
         return;
     }
+    
+    std::lock_guard<std::mutex> lock(m_mutex);
 
     if(Y_pos_update_stack.size() >= 2) {
         m_update_Y_axis_position();
@@ -325,9 +309,10 @@ void AM::Player::update_position_from_server() {
 void AM::Player::m_update_Y_axis_position() {
 
     AM::Timer* ypos_interp_timer = m_engine->get_named_timer("PLAYER_YPOS_INTERP_TIMER");
-    float interp_t = ypos_interp_timer->time_ms() / m_engine->net->get_packet_interval_ms(AM::PacketID::PLAYER_POSITION);
+    float interp_t 
+        = ypos_interp_timer->time_ms()
+        / m_engine->net->get_packet_interval_ms(AM::PacketID::PLAYER_POSITION);
 
-    std::lock_guard<std::mutex> lock2(m_mutex);
     m_position.y = Lerp(
             // The latest position is added at top of the stack.
             this->Y_pos_update_stack.read_index(1),

@@ -31,7 +31,10 @@ void AM::ServerCFG::parse_from_memory(const json& data) {
     this->gravity = data["gravity"].template get<float>();
     this->player_jump_force = data["player_jump_force"].template get<float>();
     this->player_cam_height = data["player_camera_height"].template get<float>();
-    this->day_cycle_in_minutes = data["day_cycle_in_minutes"].template get<int>();
+    this->day_cycle_in_minutes = data["day_cycle_in_minutes"].template get<float>();
+    this->player_default_inventory_size.x = data["player_default_inventory_size"]["width"].template get<int>();
+    this->player_default_inventory_size.y = data["player_default_inventory_size"]["height"].template get<int>();
+    this->item_pickup_distance = data["item_pickup_distance"].template get<float>();
     this->json_data = data.dump();
 }
 

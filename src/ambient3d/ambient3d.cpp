@@ -2,6 +2,8 @@
 #include "internal_shaders.hpp"
 #include "util.hpp"
 #include "rlgl.h"
+#include "bloom.hpp"
+
 
 AM::State::State(
         uint16_t win_width,
@@ -58,62 +60,75 @@ AM::State::State(
     SetTraceLogLevel(LOG_ALL);
 
 
-    // Create skybox.
-    m_skybox_model = LoadModelFromMesh(GenMeshSphere(1.0f, 16, 16));
-
-
-    // TODO: Adding shaders to the vector like this
-    // may be not ideal, bugs may happen where the index is not matching.
+    // TODO: Move shader loading somewhere else.
 
     // DEFAULT
-    this->add_shader(LoadShaderFromMemory(
+    this->set_shader(AM::ShaderIDX::DEFAULT,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_FRAGMENT)).c_str()
                 ));
-/*
+
     // DEFAULT_INSTANCED
-    this->add_shader(LoadShaderFromMemory(
-                GLSL_preproc(I_Shaders::DEFAULT_VERTEX, PREPROC_FLAGS::DEFINE__RENDER_INSTANCED).c_str(),
-                GLSL_preproc(I_Shaders::DEFAULT_FRAGMENT).c_str()
-                ));
-*/
-    // DEFAULT_INSTANCED
-    this->add_shader(LoadShaderFromMemory(
+    this->set_shader(AM::ShaderIDX::DEFAULT_INSTANCED,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX), 
                         PREPROC_FLAGS::DEFINE__RENDER_INSTANCED).c_str(),
 
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_FRAGMENT)).c_str()
                 ));
 
-    AM::init_instanced_shader(&this->shaders.back());
+    AM::init_instanced_shader(&this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED]);
     
-    // POST-PROCESSING
-    this->add_shader(LoadShaderFromMemory(
+    // POST_PROCESSING
+    this->set_shader(AM::ShaderIDX::POST_PROCESSING,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::POSTPROCESS_FRAGMENT)).c_str()
                 ));
  
     // BLOOM_TRESHOLD
-    this->add_shader(LoadShaderFromMemory(
+    this->set_shader(AM::ShaderIDX::BLOOM_TRESHOLD,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_TRESH_FRAGMENT)).c_str()
                 ));  
 
     // BLOOM_DOWNSAMPLE_FRAGMENT
-    this->add_shader(LoadShaderFromMemory(
+    this->set_shader(AM::ShaderIDX::BLOOM_DOWNSAMPLE_FILTER,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_DOWNSAMPLE_FRAGMENT)).c_str()
                 ));  
 
     // BLOOM_UPSAMPLE_FRAGMENT
-    this->add_shader(LoadShaderFromMemory(
+    this->set_shader(AM::ShaderIDX::BLOOM_UPSAMPLE_FILTER,
+            LoadShaderFromMemory(
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
                 GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::BLOOM_UPSAMPLE_FRAGMENT)).c_str()
                 ));  
 
+    // SKYBOX_FRAGMENT
+    this->set_shader(AM::ShaderIDX::SKYBOX,
+            LoadShaderFromMemory(
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::SKYBOX_FRAGMENT)).c_str()
+                ));
+
+    // SINGLECOLOR_FRAGMENT
+    this->set_shader(AM::ShaderIDX::SINGLE_COLOR,
+            LoadShaderFromMemory(
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::DEFAULT_VERTEX)).c_str(),
+                GLSL_preproc(AM::ShaderCode::get(AM::ShaderCode::SINGLECOLOR_FRAGMENT)).c_str()
+                ));
+
 
     this->item_manager.set_item_default_shader(this->shaders[AM::ShaderIDX::DEFAULT]);
     SetTraceLogLevel(LOG_NONE);
+
+    // Create skybox.
+    m_skybox_model = LoadModelFromMesh(GenMeshSphere(1.0f, 8, 8));
+    m_skybox_model.materials[0].shader = this->shaders[AM::ShaderIDX::SKYBOX];
 
 
     // Create rendering targets.
@@ -125,31 +140,19 @@ AM::State::State(
     m_render_targets[RenderTargetIDX::BLOOM_TRESHOLD]
         = LoadRenderTexture(win_width, win_height);
     
-    m_render_targets[RenderTargetIDX::BLOOM_PRE_RESULT]
-        = LoadRenderTexture(win_width, win_height);
-    
     m_render_targets[RenderTargetIDX::BLOOM_RESULT]
         = LoadRenderTexture(win_width, win_height);
+   
+    /*
+    m_render_targets[RenderTargetIDX::BLOOM_PRE_RESULT]
+        = LoadRenderTexture(win_width, win_height);
+    */
 
 
+    constexpr int bloom_sample_targets = 16;
+    constexpr float bloom_scale_factor = 0.85f;
+    AM::Bloom::create_sample_targets(bloom_sample_targets, bloom_scale_factor);
 
-    // Create bloom samples.
-    // TODO: Move to separate function-
-    
-    int sample_res_X = win_width;
-    int sample_res_Y = win_height;
-    constexpr float scale_factor = 0.85f;
-
-
-    for(size_t i = 0; i < m_bloom_samples.size(); i++) {
-        
-        m_bloom_samples[i] = LoadRenderTexture(sample_res_X, sample_res_Y);
-        SetTextureFilter(m_bloom_samples[i].texture, TEXTURE_FILTER_BILINEAR);
-        sample_res_X = round((float)sample_res_X * scale_factor);
-        sample_res_Y = round((float)sample_res_Y * scale_factor);
-
-    }
-    
 
 
     SetTraceLogLevel(LOG_ALL);
@@ -168,9 +171,9 @@ AM::State::State(
     this->player.set_engine_state(this);
     this->terrain.set_engine_state(this);
     this->terrain.create_chunk_materials();
- 
-    m_create_internal_timers();
     
+    m_create_internal_timers();
+
     this->ready = true;
 }
 
@@ -178,8 +181,7 @@ AM::State::~State() {
     if(this->net) {
         if(this->net->is_connected()) {
             this->net->close(m_asio_io_context);
-        }
-            
+        }            
         delete this->net;
     }
 
@@ -190,21 +192,22 @@ AM::State::~State() {
     m_lights_ubo.free();
 
     SetTraceLogLevel(LOG_NONE);
+    
     // Unload render targets.
     for(size_t i = 0; i < m_render_targets.size(); i++) {
         UnloadRenderTexture(m_render_targets[i]);
     }
-    for(size_t i = 0; i < m_bloom_samples.size(); i++) {
-        UnloadRenderTexture(m_bloom_samples[i]);
-    }
+
+    AM::Bloom::unload_sample_targets();
+
     SetTraceLogLevel(LOG_ALL);
 
     this->terrain.free_regenbuf();
     this->terrain.unload_all_chunks();
     this->terrain.unload_materials();
 
-    for(Shader& shader : this->shaders) {
-        UnloadShader(&shader);
+    for(size_t i = 0; i < AM::ShaderIDX::NUM_SHADERS; i++) {
+        UnloadShader(&this->shaders[i]);
     }
 
     UnloadFont(this->font);
@@ -217,15 +220,29 @@ void AM::State::m_create_internal_timers() {
     this->create_named_timer("SLOW_FIXED_TICK_TIMER");
 
     this->create_named_timer("PLAYER_YPOS_INTERP_TIMER");
-    
+    //this->create_named_timer("TIMEOFDAY_INTERP_TIMER");
+
     // Create callback to reset PLAYER_YPOS_INTERP_TIMER
     this->net->add_packet_callback(AM::NetProto::UDP, AM::PacketID::PLAYER_POSITION,
     [this](float interval_ms, char* data, size_t sizeb) {
-        (void)data; (void)sizeb;
+        (void)data; (void)sizeb; (void)interval_ms;
         
         AM::Timer* timer = this->get_named_timer("PLAYER_YPOS_INTERP_TIMER");
         timer->reset();
     });
+
+    /*
+    // Create callback to reset TIMEOFDAY_INTERP_TIMER
+    this->net->add_packet_callback(AM::NetProto::UDP, AM::PacketID::TIME_OF_DAY,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        (void)data; (void)sizeb; (void)interval_ms;
+        
+        AM::Timer* timer = this->get_named_timer("TIMEOFDAY_INTERP_TIMER");
+        timer->reset();
+    });
+    */
+
+
 }
 
 void AM::State::set_mouse_enabled(bool enabled) {
@@ -238,13 +255,25 @@ void AM::State::set_mouse_enabled(bool enabled) {
     }
 }
 
-void AM::State::add_shader(const Shader& shader) {
+void AM::State::set_shader(int shader_idx, const Shader& shader) {
     if(!IsShaderValid(shader)) {
-        fprintf(stderr, "ERROR! Cant add broken shader to state.\n");
+        fprintf(stderr, "ERROR! %s: Cant add broken shader.\n", __func__);
         return;
     }
-    this->shaders.push_back(shader);
+
+    this->shaders[shader_idx] = shader;
 }
+
+void AM::State::set_material(int material_idx, const Material& material) {
+    if(!IsMaterialValid(material)) {
+        fprintf(stderr, "ERROR! %s: Cant add broken material.\n", __func__);
+        return;
+    }
+
+    this->materials[material_idx] = material;
+}
+
+
 
 AM::Light** AM::State::add_light(const Light& light) {
     if(m_num_lights+1 >= AM::MAX_LIGHTS) {
@@ -371,7 +400,7 @@ void AM::State::draw_info() {
     draw_text(font_size, TextFormat("MouseEnabled = %s", m_mouse_enabled ? "Yes" : "No"),
             text_x, text_y, WHITE);
     text_y += y_add;
-    draw_text(font_size, TextFormat("TimeOfDay = %f", this->net->dynamic_data.get_float(AM::NDD_ID::TIME_OF_DAY)),
+    draw_text(font_size, TextFormat("TimeOfDay: (raw=%f, curve=%f)", this->raw_timeofday, this->timeofday_curve),
             text_x, text_y, WHITE);
     text_y += y_add;
 
@@ -384,7 +413,7 @@ void AM::State::m_render_dropped_items() {
 
     for(auto it = items->begin(); it != items->end(); ++it) {
         const AM::Item* item = &it->second;
-       
+      
         if(item->renderable.get() == NULL) {
             continue;
         }
@@ -409,45 +438,38 @@ void AM::State::m_update_player() {
 void AM::State::m_set_shader_uniforms() {
     const Vector3 player_pos = this->player.position();
     const float time = GetTime();
-    const float timeofday = this->net->dynamic_data.get_float(AM::NDD_ID::TIME_OF_DAY);
     const float fog_density = this->net->dynamic_data.get_float(AM::NDD_ID::FOG_DENSITY);
     const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
 
+    // TODO: Use uniform buffer for data which may update every frame.
+
     AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_view_pos", player_pos);
-    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_timeofday", timeofday);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_timeofday_curve", this->timeofday_curve);
     AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_time", time);
     AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_fog_density", fog_density);
     AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT].id, "u_fog_color", fog_color);
 
     AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_view_pos", player_pos);
-    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_timeofday", timeofday);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_timeofday_curve", this->timeofday_curve);
     AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_time", time);
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_fog_density", fog_density);
+    AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::DEFAULT_INSTANCED].id, "u_fog_color", fog_color);
+    
+    AM::set_uniform_float(this->shaders[AM::ShaderIDX::SKYBOX].id, "u_timeofday_curve", this->timeofday_curve);
+    AM::set_uniform_vec3(this->shaders[AM::ShaderIDX::SKYBOX].id, "u_fog_color", fog_color);
 }
-
-/*
-void AM::State::m_setframe_background_color() {
-    const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
-    ClearBackground(Color(
-                (unsigned char)((fog_color.x * 0.5f) * 255.0f),
-                (unsigned char)((fog_color.y * 0.5f) * 255.0f),
-                (unsigned char)((fog_color.z * 0.5f) * 255.0f),
-                255
-    ));
-}
-*/
-
             
 void AM::State::m_render_skybox() {
     const Vector3 player_pos = this->player.position();
-    const Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
+    Vector3 fog_color = this->net->dynamic_data.get_vector3(AM::NDD_ID::FOG_COLOR);
+   
+    fog_color *= this->timeofday_curve;
+    fog_color *= 0.5f;
+
     rlDisableDepthMask();
     rlDisableBackfaceCulling();
-    DrawModel(m_skybox_model, player_pos, 1.0f, Color(
-            (unsigned char)((fog_color.x*0.5f) * 255.0f),
-            (unsigned char)((fog_color.y*0.5f) * 255.0f),
-            (unsigned char)((fog_color.z*0.5f) * 255.0f),
-            255
-    ));
+
+    DrawModel(m_skybox_model, player_pos, 50.0f, WHITE);
     rlEnableDepthMask();
     rlEnableBackfaceCulling();
 }
@@ -479,7 +501,77 @@ void AM::State::frame_begin() {
     this->update_lights();
     this->terrain.render();
 }
-            
+
+void AM::State::frame_end() {
+    m_update_timeofday();
+    
+    EndMode3D();
+    EndTextureMode();
+
+
+    AM::Bloom::render(
+            &m_render_targets[RenderTargetIDX::BLOOM_RESULT],
+             m_render_targets[RenderTargetIDX::RESULT],
+            &this->shaders[AM::ShaderIDX::BLOOM_TRESHOLD],
+            &this->shaders[AM::ShaderIDX::BLOOM_UPSAMPLE_FILTER],
+            &this->shaders[AM::ShaderIDX::BLOOM_DOWNSAMPLE_FILTER]
+    );
+
+
+    // Postprocessing.
+
+    BeginDrawing();
+    
+    ClearBackground(BLACK);
+    const Shader& shader = this->shaders[ShaderIDX::POST_PROCESSING];
+    BeginShaderMode(shader);
+    
+    AM::set_uniform_sampler(shader.id, "texture_bloom", m_render_targets[RenderTargetIDX::BLOOM_RESULT].texture, 3);
+    //AM::set_uniform_sampler(shader.id, "texture_bloom", m_bloom_samples[1].texture, 3);
+
+    const int width  = m_render_targets[RenderTargetIDX::RESULT].texture.width;
+    const int height = m_render_targets[RenderTargetIDX::RESULT].texture.height;
+    DrawTextureRec(m_render_targets[RenderTargetIDX::RESULT].texture,
+            (Rectangle){
+                0, 0, (float)width, (float)-height
+            },
+            (Vector2){ 0, 0 }, WHITE);
+
+    EndShaderMode();
+
+
+    // Render GuiModules.
+    for(size_t i = 0; i < m_gui_modules.size(); i++) {
+        switch(m_gui_modules[i]->get_render_option()) {
+            case GuiModule::RenderOPT::WHEN_FOCUSED:
+                if(m_gui_modules[i]->has_focus) {
+                    m_gui_modules[i]->module__render(&this->font);
+                }
+                break;
+            case GuiModule::RenderOPT::ALWAYS:
+                m_gui_modules[i]->module__render(&this->font);
+                break;
+        }
+    }
+
+    this->draw_info();
+
+    EndDrawing();
+
+
+    // Update timers.
+    float frame_time = GetFrameTime();
+    for(auto timer_it = m_named_timers.begin(); timer_it != m_named_timers.end(); ++timer_it) {
+        AM::Timer* timer = timer_it->second.get();
+        if(timer->was_reset_this_frame()) {
+            timer->clear_reset_flag();
+            continue;
+        }
+        timer->update(frame_time);
+    }
+}
+
+           
 void AM::State::m_fast_fixed_tick_update() {
     AM::Timer* fast_tick_timer = this->get_named_timer("FAST_FIXED_TICK_TIMER");
     if(fast_tick_timer->time_sc() >= AM::FAST_FIXED_TICK_DELAY_SECONDS) {
@@ -572,53 +664,6 @@ void AM::State::m_update_gui_module_inputs() {
 }
 
 
-void AM::State::m_render_bloom() {
-
-    // Get bloom treshold texture.
-    AMutil::resample_texture(
-            this,
-            /* TO */   m_bloom_samples[0],
-            /* FROM */ m_render_targets[RenderTargetIDX::RESULT],
-            ShaderIDX::BLOOM_TRESHOLD
-            );
-
-    size_t p = 0;
-
-    // Scale down and filter the texture each step.
-    for(size_t i = 1; i < m_bloom_samples.size(); i++) {
-        p = i - 1; // Previous sample.
-
-        AMutil::resample_texture(
-                this,
-                /* TO */   m_bloom_samples[i],
-                /* FROM */ m_bloom_samples[p],
-                ShaderIDX::BLOOM_DOWNSAMPLE_FILTER
-                );
-    }
-
-    // Scale up and filter the texture each step.
-    for(size_t i = m_bloom_samples.size()-2; i > 0; i--) {
-        p = i + 1; // Previous sample.
-
-        AMutil::resample_texture(
-                this,
-                /* TO */   m_bloom_samples[i],
-                /* FROM */ m_bloom_samples[p],
-                ShaderIDX::BLOOM_UPSAMPLE_FILTER
-                );
-    }
-
-
-    // Now the result is ready.
-
-    AMutil::resample_texture(
-            this,
-            /* TO */   m_render_targets[RenderTargetIDX::BLOOM_RESULT],
-            /* FROM */ m_bloom_samples[1],
-            -1
-            );
-}
-
 /*
 static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool invert) {
     DrawTexturePro(tex,
@@ -631,66 +676,6 @@ static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool inve
             (Vector2){ -X, Y }, 0, WHITE);
 }
 */
-void AM::State::frame_end() {
-    EndMode3D();
-    EndTextureMode();
-
-
-    m_render_bloom();
-
-
-    // Postprocessing.
-
-    BeginDrawing();
-    
-    ClearBackground(BLACK);
-    const Shader& shader = this->shaders[ShaderIDX::POST_PROCESSING];
-    BeginShaderMode(shader);
-    
-    AM::set_uniform_sampler(shader.id, "texture_bloom", m_render_targets[RenderTargetIDX::BLOOM_RESULT].texture, 3);
-    //AM::set_uniform_sampler(shader.id, "texture_bloom", m_bloom_samples[1].texture, 3);
-
-    const int width  = m_render_targets[RenderTargetIDX::RESULT].texture.width;
-    const int height = m_render_targets[RenderTargetIDX::RESULT].texture.height;
-    DrawTextureRec(m_render_targets[RenderTargetIDX::RESULT].texture,
-            (Rectangle){
-                0, 0, (float)width, (float)-height
-            },
-            (Vector2){ 0, 0 }, WHITE);
-
-    EndShaderMode();
-
-
-    // Render GuiModules.
-    for(size_t i = 0; i < m_gui_modules.size(); i++) {
-        switch(m_gui_modules[i]->get_render_option()) {
-            case GuiModule::RenderOPT::WHEN_FOCUSED:
-                if(m_gui_modules[i]->has_focus) {
-                    m_gui_modules[i]->module__render(&this->font);
-                }
-                break;
-            case GuiModule::RenderOPT::ALWAYS:
-                m_gui_modules[i]->module__render(&this->font);
-                break;
-        }
-    }
-
-    this->draw_info();
-
-    EndDrawing();
-
-    // Update timers.
-    float frame_time = GetFrameTime();
-    for(auto timer_it = m_named_timers.begin(); timer_it != m_named_timers.end(); ++timer_it) {
-        AM::Timer* timer = timer_it->second.get();
-        if(timer->was_reset_this_frame()) {
-            timer->clear_reset_flag();
-            continue;
-        }
-        timer->update(frame_time);
-    }
-}
-
  
 void AM::State::set_gui_module_focus(int module_id, AM::GuiModuleFocus focus_option) {
     m_focused_gui_module_idx = -1;
@@ -757,4 +742,20 @@ AM::Timer* AM::State::get_named_timer(const std::string_view& timer_name) {
 
     return timer_search->second.get();
 }
+            
+void AM::State::m_update_timeofday() {
+    if(this->net->needto_sync_timeofday) {
+        printf("[STATE]: Time of day has been synchronized.\n");
+        this->net->needto_sync_timeofday = false;
+        this->raw_timeofday = this->net->dynamic_data.get_float(AM::NDD_ID::TIMEOFDAY_SYNC);
+    }
+
+    this->raw_timeofday += GetFrameTime() / (this->net->server_cfg.day_cycle_in_minutes * 60.0f);
+    if(this->raw_timeofday >= 1.0f) {
+        this->raw_timeofday = 0.0f;
+    }
+    this->timeofday_curve = (1.0f-cos(2.0f*(this->raw_timeofday*M_PI)))*0.5f;
+    this->timeofday_curve = std::clamp(this->timeofday_curve, 0.0001f, 0.9999f);
+}
+
 

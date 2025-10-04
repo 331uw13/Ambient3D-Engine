@@ -85,7 +85,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
             {
                 printf("[NETWORK]: Received client config:\n%s\n", m_data);
                 this->config.parse_from_memory(json::parse(m_data));
-                this->packet.prepare(AM::PacketID::SERVER_GOT_CLIENT_CONFIG);
+                this->packet.prepare(AM::PacketID::TIMEOFDAY_SYNC);
+                this->packet.write<float>({ m_server->timeofday });
                 this->send_packet(); 
             }
             break;

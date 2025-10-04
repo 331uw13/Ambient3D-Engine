@@ -24,7 +24,7 @@
 
 namespace AM {
 
-    static constexpr int NUM_BLOOM_SAMPLES = 16;
+    //static constexpr int NUM_BLOOM_SAMPLES = 16;
     static constexpr int MAX_LIGHTS = 64;
     static constexpr int CHAT_KEY = KEY_ENTER;
     static constexpr Vector3 UP_VECTOR = Vector3(0.0f, 1.0f, 0.0f);
@@ -33,15 +33,31 @@ namespace AM {
     static constexpr float FAST_FIXED_TICK_DELAY_SECONDS = 0.075f;
     static constexpr float SLOW_FIXED_TICK_DELAY_SECONDS = 4.0f;
 
-    enum ShaderIDX : int {
-        DEFAULT,
-        DEFAULT_INSTANCED,
-        POST_PROCESSING,
-        BLOOM_TRESHOLD,
-        BLOOM_DOWNSAMPLE_FILTER,
-        BLOOM_UPSAMPLE_FILTER,
-        // ...
+    namespace ShaderIDX {
+        enum : int {
+            DEFAULT,
+            DEFAULT_INSTANCED,
+            POST_PROCESSING,
+            BLOOM_TRESHOLD,
+            BLOOM_DOWNSAMPLE_FILTER,
+            BLOOM_UPSAMPLE_FILTER,
+            SKYBOX,
+            SINGLE_COLOR,
+
+            NUM_SHADERS
+            // ...
+        };
     };
+
+    namespace MaterialIDX {
+        enum : int {
+
+            // ...
+
+            NUM_MATERIALS,
+        };
+    }
+
 
     enum GuiModuleFocus {
         GAIN,
@@ -73,10 +89,17 @@ namespace AM {
 
 
             // === SHADERS ===
-
             // Shaders in this array will be unloaded when the state is destructed.
-            std::vector<Shader> shaders;
-            void add_shader(const Shader& shader);
+            
+            std::array<Shader, AM::ShaderIDX::NUM_SHADERS> shaders;
+            void set_shader(int shader_idx, const Shader& shader);
+
+            // === GENERAL PURPOSE MATERIALS ===
+            // Materials in this array will be unloaded when the state is destructed.
+
+            std::array<Material, AM::MaterialIDX::NUM_MATERIALS> materials;
+            void set_material(int material_idx, const Material& material);
+
 
 
             // ===  LIGHTS ===
@@ -128,7 +151,16 @@ namespace AM {
 
 
             // === MISC ===
-            
+          
+            // Time of day is in range of 0.0 to 1.0
+            // 0.0 is mid night. 0.5 is mid day and 1.0 is mid night again.
+            float   raw_timeofday { 0.0f };
+            // Time of day curve smooths out the cycle so that
+            // when raw_timeofday is near 0.0(mid night) return value is near 0.0
+            // when raw_timeofday is near 0.5(mid day) return value is near 1.0
+            // when raw_timeofday is near 1.0(mid night again) return value will be near 0.0 again.
+            float   timeofday_curve { 0.0f };
+
             void    draw_info();
             void    draw_text(int font_size, const char* text, int x, int y, const Color& color);
 
@@ -136,6 +168,7 @@ namespace AM {
             //      but when it reaches 0.5 "blinking" starts happening
             //      and it gets stronger towards 1.0
             void    set_vision_effect(float amount);
+
 
             void set_fast_fixed_tick_callback(std::function<void(AM::State*)> callback) {
                 m_fast_fixed_tick_callback = callback;
@@ -156,7 +189,6 @@ namespace AM {
             enum RenderTargetIDX : int {
                 RESULT,
                 BLOOM_TRESHOLD,
-                BLOOM_PRE_RESULT,
                 BLOOM_RESULT,
 
                 NUM_TARGETS
@@ -167,24 +199,20 @@ namespace AM {
             std::unordered_map<std::string, std::shared_ptr<AM::Timer>, 
                 AM::TransparentStringHash, std::equal_to<>> m_named_timers;
             std::mutex                                      m_named_timers_mutex;
-
+            
             std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
                 m_render_targets;
-
-            std::array<RenderTexture2D, NUM_BLOOM_SAMPLES>
-                m_bloom_samples;
 
             void                             m_render_dropped_items();
             void                             m_render_skybox();
 
-            //float                            m_fixed_tick_timer         { 0.0f };
-            //float                            m_fixed_tick_delay         { 0.075f };
             std::function<void(AM::State*)>  m_slow_fixed_tick_callback;
             std::function<void(AM::State*)>  m_fast_fixed_tick_callback;
             void                             m_slow_fixed_tick_update();
             void                             m_fast_fixed_tick_update();
             void                             m_set_shader_uniforms();
-
+            void                             m_update_timeofday();
+            
             void                             m_update_player();
 
             void                             m_update_gui_module_inputs();

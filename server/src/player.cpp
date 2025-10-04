@@ -9,6 +9,11 @@ AM::Player::Player(std::shared_ptr<TCP_session> _tcp_session)
 {
 }
 
+            
+void AM::Player::free_memory() {
+    this->tcp_session->packet.free_memory();
+    this->inventory.free_memory();
+}
 
 
 int AM::Player::id() const {

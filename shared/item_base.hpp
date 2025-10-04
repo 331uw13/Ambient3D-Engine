@@ -45,6 +45,11 @@ namespace AM {
         TOOL
     };
 
+    enum ItemState {
+        IN_INVENTORY,
+        DROPPED
+    };
+
     class ItemBase {
         public:
             void load_info(const json& item_list, AM::ItemID item_id, const char* entry_name);
@@ -60,6 +65,7 @@ namespace AM {
             float pos_y;
             float pos_z;
 
+            ItemState state { ItemState::DROPPED };
             ItemType  type;
             ItemID    id;
 

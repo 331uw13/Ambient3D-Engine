@@ -72,13 +72,12 @@ namespace AM {
 
             uint32_t num_meshes()  { return (uint32_t)m_model.meshCount; }
             Model* get_model()     { return &m_model; }
+
         private:
 
-            MeshAttrib* m_mesh_attribs;
-            //std::vector<MeshAttrib> m_mesh_attribs;
-            bool m_loaded { false };
-
-            Model m_model;
+            MeshAttrib*  m_mesh_attribs;
+            bool         m_loaded { false };
+            Model        m_model;
 
             void m_name_from_path(const char* path);
     };

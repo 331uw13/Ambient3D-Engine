@@ -100,6 +100,8 @@ void main_loop(AM::State* st) {
 
     AM::Chatbox* chatbox = st->find_gui_module<AM::Chatbox>(AM::GuiModuleID::CHATBOX);
 
+
+
     while(!WindowShouldClose()) {
 
         if(IsKeyPressed(KEY_TAB)) {

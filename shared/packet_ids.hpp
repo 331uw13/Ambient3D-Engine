@@ -38,7 +38,7 @@ namespace AM {
             Server <- Client  (GET_SERVER_CONFIG)        (TCP)
             Server -> Client  (SERVER_CONFIG)            (TCP)
             Server <- Client  (CLIENT_CONFIG)            (TCP)
-            Server -> Client  (SERVER_GOT_CLIENT_CONFIG) (TCP)
+            Server -> Client  (TIMEOFDAY_SYNC)           (TCP)
             Server <- Client  (PLAYER_FULLY_CONNECTED)   (TCP)
         */
 
@@ -87,8 +87,6 @@ namespace AM {
         // 4            :  Config json      (char array)
         CLIENT_CONFIG,  // (tcp only)
        
-        SERVER_GOT_CLIENT_CONFIG,
-
         // Client must tell the server it has been fully connected
         // after it stored all needed information.
         PLAYER_FULLY_CONNECTED, // (tcp only)
@@ -186,7 +184,7 @@ namespace AM {
         // ---------------------------------
         // 0            :  Packet ID        (int)
         // 4            :  Player ID        (int)
-        PLAYER_JUMP,
+        PLAYER_JUMP, // (udp only)
 
         // Server will send item update packets to let nearby 
         // clients know where the items are.
@@ -207,19 +205,17 @@ namespace AM {
         // is used after (byte offset 24 + item entry name size)
         // AM::PACKET_DATA_SEPARATOR is defined in "networking_agreement.hpp"
         ITEM_UPDATE, // (udp only)
-      
-
-        // Server sends players the in game time of day.
-        // It is in range of: 0.0 to 1.0f
-        // 0.0 is mid night. 
-        // 0.5 is mid day. 
-        // 1.0 is mid night again.
+     
+        // Clients handle their own time but when the client connects
+        // it has to know what time of day it is.
+        // And every 10 seconds server sends this packet to clients which are already connected.
+        // (This is in game time and not related to real life time at all)
         //
         // Byte offset  |  Value name
         // ---------------------------------
         // 0            :  Packet ID        (int)
         // 4            :  Time of day      (float)
-        TIME_OF_DAY,
+        TIMEOFDAY_SYNC, // (tcp only)
 
         // Server sends players the weather data.
         //
@@ -230,7 +226,7 @@ namespace AM {
         // 8            :  Fog Color R      (float)
         // 12           :  Fog Color G      (float)
         // 16           :  Fog Color B      (float)
-        WEATHER_DATA,
+        WEATHER_DATA, // (udp only)
 
         NUM_PACKETS
     };
@@ -244,7 +240,7 @@ namespace AM {
         static constexpr size_t PLAYER_POSITION_MAX = 28;
         static constexpr size_t PLAYER_UNLOADED_CHUNKS_MIN = 8;
         static constexpr size_t PLAYER_JUMP = 4;
-        static constexpr size_t TIME_OF_DAY = 4;
+        static constexpr size_t TIMEOFDAY_SYNC = 4;
         static constexpr size_t WEATHER_DATA = 16;
     };
 };

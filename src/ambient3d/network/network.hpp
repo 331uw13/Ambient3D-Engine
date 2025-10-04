@@ -101,7 +101,9 @@ namespace AM {
 
             int           player_id;
             AM::ServerCFG server_cfg;
-        
+       
+            std::atomic<bool> needto_sync_timeofday { false };
+
         private:
 
             void m_attach_main_TCP_packet_callbacks();

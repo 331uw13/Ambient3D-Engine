@@ -31,7 +31,7 @@ AM::Server::~Server() {
     
     for(auto player_it = this->players.begin(); player_it != this->players.end(); ++player_it) {
         AM::Player* player = player_it->second;
-        player->tcp_session->packet.free_memory();
+        player->free_memory();
     }
 
     printf("Server closed.\n");
@@ -103,8 +103,8 @@ void AM::Server::start(asio::io_context& io_context) {
         std::thread(&AM::Server::m_worldgen_th__func, this);
 
     // Spawn items for testing
-    this->spawn_item(AM::ItemID::M4A16, 1, Vec3{ 3, 3, 16 });
-    this->spawn_item(AM::ItemID::HEAVY_AXE, 1, Vec3{ 6, 3, -40 });
+    this->spawn_item(AM::ItemID::M4A16, 1, Vec3{ 3, 2, 16 });
+    this->spawn_item(AM::ItemID::HEAVY_AXE, 1, Vec3{ 6, 2, -40 });
 
 
     // Input handler may tell to shutdown.
@@ -121,7 +121,6 @@ void AM::Server::start(asio::io_context& io_context) {
 
             
 void AM::Server::remove_player(int player_id) {
-
     const auto search = this->players.find(player_id);
     if(search == this->players.end()) {
         fprintf(stderr, "ERROR! %s: Trying to remove player id (%i). But it doesnt exist.\n",
@@ -130,8 +129,8 @@ void AM::Server::remove_player(int player_id) {
     }
 
     AM::Player* player = search->second;
+    player->free_memory();
 
-    player->tcp_session->packet.free_memory();
     this->players.erase(search);
     delete player;
 
@@ -158,6 +157,10 @@ void AM::Server::m_do_accept_TCP() {
                 AM::Player* player = new AM::Player(std::make_shared<AM::TCP_session>(std::move(socket), this, player_id));
                 player->set_id(player_id);
                 player->set_server(this);
+                player->inventory.create(AM::InventorySize {
+                        .num_slots_x = (uint8_t)this->config.player_default_inventory_size.x,
+                        .num_slots_y = (uint8_t)this->config.player_default_inventory_size.y,
+                });
 
                 this->players.insert(std::make_pair(player_id, player)).first;
 
@@ -233,14 +236,7 @@ void AM::Server::m_send_player_position(AM::Player* player) {
     player->clear_next_position_flags();
     m_udp_handler.send_packet(player->id());
 }
- 
-            
-void AM::Server::m_send_player_timeofday(AM::Player* player) {
-    m_udp_handler.packet.prepare(AM::PacketID::TIME_OF_DAY);
-    m_udp_handler.packet.write<float>({ this->time_of_day });
-    m_udp_handler.send_packet(player->id());
-}
-            
+                 
 void AM::Server::m_send_player_weather_data(AM::Player* player) {
     m_udp_handler.packet.prepare(AM::PacketID::WEATHER_DATA);
     m_udp_handler.packet.write<float>({
@@ -269,7 +265,6 @@ void AM::Server::m_send_player_updates() {
 
         player->update();
         m_send_player_position(player);
-        m_send_player_timeofday(player);
         m_send_player_weather_data(player);
 
         for(auto itB = this->players.begin();
@@ -453,16 +448,18 @@ void AM::Server::m_process_resend_id_queue() {
 }
 
 
-void AM::Server::m_update_time_of_day(float update_interval_ms) {
-    this->time_of_day += update_interval_ms / (this->config.day_cycle_in_minutes * 60.0f);
-    if(this->time_of_day >= 1.0f) {
-        this->time_of_day = 0.0f;
+void AM::Server::m_update_timeofday(float update_interval_ms) {
+    this->timeofday += (update_interval_ms/1000.0f) / (this->config.day_cycle_in_minutes * 60.0f);
+    if(this->timeofday >= 1.0f) {
+        this->timeofday = 0.0f;
     }
 }
 
 
+
 void AM::Server::m_update_loop_th__func() {
     while(m_keep_threads_alive) {
+        m_update_timer.start();
         m_tick_timer.start();
 
         m_process_resend_id_queue();
@@ -471,17 +468,20 @@ void AM::Server::m_update_loop_th__func() {
         m_send_item_updates();
 
 
-        m_tick_timer.stop();
-        const double delta_time_ms = m_tick_timer.delta_time_ms();
+        m_update_timer.stop();
+        const double update_delta_time_ms = m_update_timer.delta_time_ms();
+
         
-        if(delta_time_ms < this->config.tick_delay_ms) {
+        if(update_delta_time_ms < this->config.tick_delay_ms) {
             // Update finished early, wait some time to try keep correct tick delay.
             std::this_thread::sleep_for(
                     std::chrono::duration_cast<std::chrono::milliseconds>
-                    (std::chrono::duration<double, std::milli>(this->config.tick_delay_ms - delta_time_ms)));
+                    (std::chrono::duration<double, std::milli>(this->config.tick_delay_ms - update_delta_time_ms)));
         }
 
-        m_update_time_of_day(delta_time_ms);
+        m_tick_timer.stop();
+        m_update_timeofday(m_tick_timer.delta_time_ms());
+        //m_update_timeofday(delta_time_ms + (this->config.tick_delay_ms - delta_time_ms));
     }
 }
 

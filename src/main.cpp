@@ -150,7 +150,7 @@ void main_loop(AM::State* st) {
 
         // Rendering...
         st->frame_begin();
-        
+
         render_scene(st, &gst);  
         
         st->frame_end();

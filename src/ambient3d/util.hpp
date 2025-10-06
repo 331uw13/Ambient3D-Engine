@@ -31,8 +31,8 @@ namespace AMutil {
     std::string combine_constchar(std::initializer_list<const char*> list);
     std::string combine_files(std::initializer_list<const char*> filenames);
 
-    void draw_mesh_instanced(Mesh mesh, Material material, const Matrix *transforms, int instances);
-
+    // Returns Yaw(X) and Pitch(Y) rotations.
+    Vector2 get_rotation_towards(const Vector3& a, const Vector3& b);
             
     // If 'shader_idx' < 0: Default shader is used.
     // If dimensions are negative the corresponding texture dimensions are used.

@@ -150,12 +150,15 @@ std::string AM::ShaderCode::get(GLSL_CodeID codeid) {
             in vec3 frag_normal;
             in vec3 frag_position;
 
+            uniform sampler2D texture0;
             uniform vec4 u_color;
 
             out vec4 out_color;
 
             void main() {
-                out_color = u_color;
+                vec4 v = texture(texture0, frag_texcoord) * u_color;
+                if(v.a < 0.01) { discard; }
+                out_color = v;
             }
             )";
 

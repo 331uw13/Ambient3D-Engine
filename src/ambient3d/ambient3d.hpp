@@ -58,21 +58,30 @@ namespace AM {
         };
     }
 
-
     enum GuiModuleFocus {
         GAIN,
         LOSE,
         TOGGLE
     };
 
+    namespace StateFlags {
+
+        static constexpr int DONT_RENDER_DEFAULT_ITEMINFO = (1 << 0);
+    };
+
     class State {
         public:
+
+            State(){};
             State(uint16_t win_width, uint16_t win_height,
                     const char* title,
                     const char* config_file,
                     AM::NetConnectCFG network_cfg);
 
             ~State();
+
+            void enable_flag(int state_flag)  { m_flags |=  state_flag; }
+            void disable_flag(int state_flag) { m_flags &= ~state_flag; }
 
             Font         font;
             Player       player;
@@ -163,6 +172,15 @@ namespace AM {
 
             void    draw_info();
             void    draw_text(int font_size, const char* text, int x, int y, const Color& color);
+            
+            void    draw_text_3D(
+                    const char* text,
+                    float font_scale,
+                    float font_spacing,
+                    Color color, 
+                    Vector2 originxy,
+                    Vector3 position,
+                    Vector3 rotation);
 
             //      When amount is close to 0.0 small distortions happen
             //      but when it reaches 0.5 "blinking" starts happening
@@ -179,6 +197,9 @@ namespace AM {
             }
 
         private:
+
+            int m_flags { 0 };
+
             bool m_mouse_enabled          { true };
             bool m_movement_enabled       { true };
             bool m_connected_to_server    { false };
@@ -203,7 +224,8 @@ namespace AM {
             std::array<RenderTexture2D, RenderTargetIDX::NUM_TARGETS>
                 m_render_targets;
 
-            void                             m_render_dropped_items();
+            void                             m_update_dropped_items();
+            void                             m_render_default_iteminfo(const AM::Item* item);
             void                             m_render_skybox();
 
             std::function<void(AM::State*)>  m_slow_fixed_tick_callback;

@@ -89,4 +89,13 @@ void AMutil::resample_texture(
 
     EndTextureMode();
 }
+    
+Vector2 AMutil::get_rotation_towards(const Vector3& a, const Vector3& b) {
+    Vector3 diff = Vector3Subtract(a, b);
+    float diff_len = Vector3Length(diff);
+
+    float zr = acos(diff.y / diff_len) - 90.0f*DEG2RAD;
+    float xr = -(atan2(diff.z, diff.x)+M_PI);
+    return Vector2(360.0f-xr, -zr);
+}
 

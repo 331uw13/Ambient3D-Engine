@@ -406,11 +406,8 @@ void AM::State::draw_info() {
 
 }
 
-
-void AM::State::m_render_dropped_items() {
-    
+void AM::State::m_update_dropped_items() {    
     auto items = this->item_manager.get_dropped_items();
-
     for(auto it = items->begin(); it != items->end(); ++it) {
         const AM::Item* item = &it->second;
       
@@ -423,15 +420,89 @@ void AM::State::m_render_dropped_items() {
 
         *item->renderable->transform = MatrixTranslate(item->pos_x, item->pos_y, item->pos_z);
         item->renderable->render();
+
+        if(!(m_flags & AM::StateFlags::DONT_RENDER_DEFAULT_ITEMINFO)) {
+            m_render_default_iteminfo(item);
+        }
     }
 }
+            
+void AM::State::m_render_default_iteminfo(const AM::Item* item) {
+    Vector3 item_pos = Vector3(item->pos_x, item->pos_y, item->pos_z);
+    Vector3 player_pos = this->player.position();
+    float distance = Vector3Distance(item_pos, player_pos);
+    if(distance >= this->net->server_cfg.item_pickup_distance) {
+        return;
+    }
+
+    Vector2 towards_player = AMutil::get_rotation_towards(item_pos, player_pos);
+    towards_player *= RAD2DEG;
+
+    float normalized_dist = 1.0 - (distance / this->net->server_cfg.item_pickup_distance);
+    normalized_dist = std::clamp(normalized_dist*2.0f, 0.0f, 1.0f);
+
+    Color text_color = Color(255, 255, 255, (unsigned char)(normalized_dist * 255.0f));
+
+    this->draw_text_3D(item->display_name,
+            0.03f, // Font scale.
+            1.0f,  // Font spacing.
+            text_color,
+            Vector2(40.0f, 0.0f), // Origin xy.
+            item_pos,
+            Vector3(towards_player.x, towards_player.y, 0.0f));
+
+    text_color.a *= 0.5f;
+
+    this->draw_text_3D("[E] to pickup",
+            0.016f, // Font scale.
+            1.0f,   // Font spacing.
+            text_color,
+            Vector2(80.0f, 20.0f), // Origin xy.
+            item_pos,
+            Vector3(towards_player.x, towards_player.y, 0.0f));
+}
+
+void AM::State::draw_text_3D(const char* text,
+        float font_scale,
+        float font_spacing,
+        Color color,
+        Vector2 originxy,
+        Vector3 position,
+        Vector3 rotation
+){
+    BeginShaderMode(this->shaders[AM::ShaderIDX::SINGLE_COLOR]);
+
+    constexpr int font_size = 10;
+    const float text_width = MeasureTextEx(this->font,text, font_size, font_spacing).x;
+
+    rlPushMatrix();
+    rlLoadIdentity();
+    rlTranslatef(0, 0, 0);
+    rlTranslatef(position.x, position.y, position.z);
+    rlRotatef(180.0f, 0.0, 0.0, 1.0);
+    rlRotatef(rotation.x, 0.0, 1.0, 0.0);
+    rlRotatef(rotation.y, 1.0, 0.0, 0.0);
+    rlRotatef(rotation.z, 0.0, 0.0, 1.0);
+    rlScalef(font_scale, font_scale, font_scale);
+
+    AM::set_uniform_vec4(this->shaders[AM::ShaderIDX::SINGLE_COLOR].id, "u_color", 
+            Vector4(
+                (float)color.r / 255.0f,
+                (float)color.g / 255.0f,
+                (float)color.b / 255.0f,
+                (float)color.a / 255.0f));
+    DrawTextEx(this->font, text, Vector2(-text_width/2, 0)+originxy, font_size, font_spacing, color);
+
+    rlPopMatrix();
+    EndShaderMode();
+}
+
 
 void AM::State::m_update_player() {
  
     this->player.set_terrain_surface_y(this->terrain.get_surface_level(this->player.position()));
     this->player.update_position_from_server();
     this->player.update_gravity();
-
 
 }
 
@@ -469,7 +540,7 @@ void AM::State::m_render_skybox() {
     rlDisableDepthMask();
     rlDisableBackfaceCulling();
 
-    DrawModel(m_skybox_model, player_pos, 50.0f, WHITE);
+    DrawModel(m_skybox_model, player_pos, 50.0f, BLACK);
     rlEnableDepthMask();
     rlEnableBackfaceCulling();
 }
@@ -484,11 +555,14 @@ void AM::State::frame_begin() {
 
     m_render_skybox();
 
+    this->update_lights();
+    this->terrain.render();
+
     m_slow_fixed_tick_update();
     m_fast_fixed_tick_update();
     m_update_gui_module_inputs();
     m_update_player();
-    m_render_dropped_items();
+    m_update_dropped_items();
 
     // TODO: Move these.
     //       User may need better control.
@@ -498,8 +572,6 @@ void AM::State::frame_begin() {
     this->player.update_movement(m_movement_enabled);
     //this->player.update_animation();
 
-    this->update_lights();
-    this->terrain.render();
 }
 
 void AM::State::frame_end() {

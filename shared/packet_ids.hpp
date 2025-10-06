@@ -228,6 +228,17 @@ namespace AM {
         // 16           :  Fog Color B      (float)
         WEATHER_DATA, // (udp only)
 
+
+        // Clients can send this packet to pickup items.
+        // The server will check if the pickup is allowed.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Item UUID        (int)
+        PICKUP_ITEM,
+
+
         NUM_PACKETS
     };
 

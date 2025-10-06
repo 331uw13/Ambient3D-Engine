@@ -6,7 +6,7 @@ if [[ -z $1 ]]; then
 fi
 
 make clean
-rm -rf ./raylib/build
+#rm -rf ./raylib/build
 (cd server/ && make clean)
 
 

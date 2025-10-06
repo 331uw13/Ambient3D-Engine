@@ -10,6 +10,8 @@
 #include "anim_ids.hpp"
 #include "threadsafe_stack.hpp"
 #include "chunk_pos.hpp"
+#include "inventory.hpp"
+
 
 namespace AM {
     class State;
@@ -24,6 +26,7 @@ namespace AM {
                 m_engine = st;
             }
 
+            AM::Inventory inventory;
             
             Vector3 position() const;                  // < thread safe >
             void    set_position(const Vector3& pos);  // < thread safe >
@@ -90,10 +93,6 @@ namespace AM {
             mutable std::mutex m_mutex;
             
             Vector3 m_movement { 0.0f, 0.0f, 0.0f }; 
-
-            // IMPORTANT NOTE:
-            // It is more safe to access these variables through
-            // public set/get functions because they are thread safe.
 
             //void m_update_animation();
             void m_jump();

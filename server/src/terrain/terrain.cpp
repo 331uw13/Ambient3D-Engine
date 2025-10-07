@@ -2,7 +2,7 @@
 #include <cmath>
 
 #include "terrain.hpp"
-#include "ray.hpp"
+#include "shared/include/ray.hpp"
 #include "../server.hpp"
 
 

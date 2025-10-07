@@ -11,9 +11,9 @@
 #include <deque>
 #include <asio.hpp>
 
-#include "packet_writer.hpp"
 #include "network_player.hpp"
-#include "server_config.hpp"
+#include "shared/include/packet_writer.hpp"
+#include "shared/include/server_config.hpp"
 #include "net_dynamic_data.hpp"
 #include "../item_manager.hpp"
 #include "../terrain/terrain.hpp"

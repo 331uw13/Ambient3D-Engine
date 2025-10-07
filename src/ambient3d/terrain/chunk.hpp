@@ -4,8 +4,8 @@
 #include <cstddef>
 
 #include "raylib.h"
-#include "chunk_pos.hpp"
-#include "ivec2.hpp"
+#include "shared/include/ivec2.hpp"
+#include "shared/include/chunk_pos.hpp"
 
 namespace AM {
 

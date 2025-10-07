@@ -1,7 +1,7 @@
 #include <cstdio>
 
 #include "noise_generator.hpp"
-#include "perlin_noise.hpp"
+#include "shared/include/perlin_noise.hpp"
 
 
 static float map(float t, float src_min, float src_max, float dst_min, float dst_max) {

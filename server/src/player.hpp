@@ -6,9 +6,9 @@
 #include <atomic>
 
 #include "tcp_session.hpp"
-#include "vec3.hpp"
 #include "terrain/chunk.hpp"
-#include "inventory.hpp"
+#include "shared/include/inventory.hpp"
+#include "shared/include/vec3.hpp"
 
 
 

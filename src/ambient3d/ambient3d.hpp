@@ -16,10 +16,10 @@
 #include "glsl_preproc.hpp"
 #include "util.hpp"
 #include "timer.hpp"
-#include "client_config.hpp"
 #include "network/network.hpp"
 #include "terrain/terrain.hpp"
 #include "transparent_str_hash.hpp"
+#include "shared/include/client_config.hpp"
 
 
 namespace AM {

@@ -1,6 +1,6 @@
 #include <cmath>
 
-#include "vec3.hpp"
+#include "../include/vec3.hpp"
 
 
 float AM::Vec3::length() const {

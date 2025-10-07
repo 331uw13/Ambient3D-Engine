@@ -10,12 +10,12 @@
 #include <asio.hpp>
 #include <nlohmann/json.hpp>
 
-#include "networking_agreements.hpp"
-#include "server_config.hpp"
+#include "shared/include/networking_agreements.hpp"
+#include "shared/include/server_config.hpp"
+#include "shared/include/item_base.hpp"
 
 #include "udp_handler.hpp"
 #include "player.hpp"
-#include "item_base.hpp"
 #include "terrain/terrain.hpp"
 #include "terrain/chunk_data.hpp"
 #include "timer.hpp"

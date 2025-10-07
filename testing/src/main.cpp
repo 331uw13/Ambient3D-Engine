@@ -1,7 +1,7 @@
 
-#include "../src/ambient3d/ambient3d.hpp"
-#include "../src/ambient3d/animation.hpp"
-#include "../src/ambient3d/network/assets_downloader.hpp"
+#include "src/ambient3d/ambient3d.hpp"
+#include "src/ambient3d/animation.hpp"
+#include "src/ambient3d/network/assets_downloader.hpp"
 
 #include <cstdio>
 #include <raymath.h>
@@ -167,7 +167,6 @@ int main(int argc, char** argv) {
     io_context.stop();
 
 
-    /*
 
     AM::State st(1000, 800, 
             "Ambient3D - Development",
@@ -181,7 +180,6 @@ int main(int argc, char** argv) {
     if(st.ready) {
         main_loop(&st);
     }
-    */
    
     return 0;
 }

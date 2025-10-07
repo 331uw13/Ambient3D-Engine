@@ -2,9 +2,9 @@
 #define AMBIENT3D_SERVER_CHUNK_HPP
 
 #include "noise_generator.hpp"
-#include "server_config.hpp"
-#include "chunk_pos.hpp"
-#include "ivec2.hpp"
+#include "shared/include/server_config.hpp"
+#include "shared/include/chunk_pos.hpp"
+#include "shared/include/ivec2.hpp"
 
 namespace AM {
 

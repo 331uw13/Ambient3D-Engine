@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "item_base.hpp"
+#include "shared/include/item_base.hpp"
 #include "renderable.hpp"
 #include "raylib.h"
 

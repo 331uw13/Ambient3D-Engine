@@ -9,8 +9,8 @@
 
 #include "anim_ids.hpp"
 #include "threadsafe_stack.hpp"
-#include "chunk_pos.hpp"
-#include "inventory.hpp"
+#include "shared/include/inventory.hpp"
+#include "shared/include/chunk_pos.hpp"
 
 
 namespace AM {

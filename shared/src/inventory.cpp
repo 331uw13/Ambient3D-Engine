@@ -1,6 +1,6 @@
 #include <cstdio>
 
-#include "inventory.hpp"
+#include "../include/inventory.hpp"
 
             
 

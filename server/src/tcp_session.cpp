@@ -5,9 +5,8 @@
 #include "tcp_session.hpp"
 #include "server.hpp"
 
-// From '../../shared'
-#include "packet_ids.hpp"
-#include "packet_parser.hpp"
+#include "shared/include/packet_ids.hpp"
+#include "shared/include/packet_parser.hpp"
 
 
 AM::TCP_session::TCP_session(tcp::socket socket, AM::Server* server, int player_id) 

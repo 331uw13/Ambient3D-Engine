@@ -20,7 +20,7 @@
 
 #include "raylib.h"
 #include "item.hpp"
-#include "server_config.hpp"
+#include "shared/include/server_config.hpp"
 
 using json = nlohmann::json;
 

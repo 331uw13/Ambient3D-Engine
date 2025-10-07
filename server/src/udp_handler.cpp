@@ -2,8 +2,8 @@
 
 #include "server.hpp"
 #include "udp_handler.hpp"
-#include "packet_ids.hpp"
-#include "packet_parser.hpp"
+#include "shared/include/packet_ids.hpp"
+#include "shared/include/packet_parser.hpp"
 
 
 void AM::UDP_handler::m_handle_received_packet(size_t sizeb) {

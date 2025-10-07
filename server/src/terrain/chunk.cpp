@@ -1,7 +1,7 @@
 #include <cstdio>
 
 #include "chunk.hpp"
-#include "perlin_noise.hpp"
+#include "shared/include/perlin_noise.hpp"
 
 
 void AM::Chunk::generate(

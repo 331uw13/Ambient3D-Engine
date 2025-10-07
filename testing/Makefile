@@ -10,12 +10,12 @@ SRC  = $(shell find ./src -type f -name *.cpp)
 
 RAYLIB_PATH = "../raylib/build/raylib_modified/"
 RAYLIB_HEADERS = "../raylib/src"
-AMBIENT3D_SHARED = "../shared"
+AMBIENT3D_SHARED = ".."
 
 
 LIBS = -L$(RAYLIB_PATH) -Wl,-rpath,$(RAYLIB_PATH) -lraylib_modified \
+	   -L../shared -Wl,-rpath ../shared/ -lambient3d_shared \
 	   -lGL -lm -lpthread -ldl -lrt -lX11 -llz4 -lambient3d
-
 OBJS = $(SRC:.cpp=.o)
 
 

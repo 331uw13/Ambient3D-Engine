@@ -1,7 +1,7 @@
 #include <fstream>
 #include <cstdio>
 
-#include "client_config.hpp"
+#include "../include/client_config.hpp"
 
 
 AM::ClientConfig::ClientConfig(const char* json_cfg_path) {

@@ -1,7 +1,7 @@
 #include <fstream>
 #include <cstdio>
 
-#include "server_config.hpp"
+#include "../include/server_config.hpp"
 
 
 AM::ServerCFG::ServerCFG(const char* json_cfg_path) {

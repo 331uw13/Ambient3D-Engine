@@ -1,7 +1,8 @@
 
 #include <math.h>
 #include <cstdio>
-#include "perlin_noise.hpp"
+#include "../include/perlin_noise.hpp"
+
 
 static int p[512] = {
 151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 

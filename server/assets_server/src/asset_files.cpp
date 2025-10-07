@@ -5,7 +5,7 @@ namespace fs = std::filesystem;
 
 
 #include "asset_files.hpp"
-#include "../../../shared/file_sha256.hpp"
+#include "shared/include/file_sha256.hpp"
 
 
 

@@ -2,7 +2,7 @@
 #define AMBIENT3D_GAME_ASSETS_DOWNLOADER_HPP
 
 #include <asio.hpp>
-#include "networking_agreements.hpp"
+#include "shared/include/networking_agreements.hpp"
 
 using namespace asio::ip;
 

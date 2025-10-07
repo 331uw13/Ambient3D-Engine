@@ -3,8 +3,8 @@
 #include <cstdio>
 
 #include "terrain.hpp"
-#include "ray.hpp"
 #include "../ambient3d.hpp"
+#include "shared/include/ray.hpp"
 
 
 void AM::Terrain::allocate_regenbuf(size_t num_bytes) {

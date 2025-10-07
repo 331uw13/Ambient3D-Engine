@@ -1,8 +1,8 @@
 #include <fstream>
 #include <openssl/sha.h>
 
-#include "file_sha256.hpp"
-#include "byte_array.hpp"
+#include "../include/file_sha256.hpp"
+#include "../include/byte_array.hpp"
 
 
 void AM::compute_sha256_filehash(const std::string filepath, std::string* out) {

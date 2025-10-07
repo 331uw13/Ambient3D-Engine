@@ -4,7 +4,7 @@
 
 #include "../ambient3d.hpp"
 #include "network.hpp"
-#include "packet_parser.hpp"
+#include "shared/include/packet_parser.hpp"
             
 
 void AM::Network::m_attach_main_TCP_packet_callbacks() {

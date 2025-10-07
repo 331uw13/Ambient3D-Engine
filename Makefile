@@ -4,15 +4,16 @@ CXX = g++
 TARGET_NAME = libambient3d.a
 
 SRC  = $(shell find ./src -type f -name *.cpp)
-SRC += $(shell find ./shared -type f -name *.cpp)
+#SRC += $(shell find ./shared -type f -name *.cpp)
 
 
 RAYLIB_PATH = "./raylib/build/raylib_modified/"
 RAYLIB_HEADERS = "./raylib/src"
-AMBIENT3D_SHARED = ./shared
+AMBIENT3D_SHARED = .
 
 
 LIBS = -L$(RAYLIB_PATH) -Wl,-rpath,$(RAYLIB_PATH) -lraylib_modified \
+	   -L./shared/ -lambient3d_shared \
 	   -lGL -lm -lpthread -ldl -lrt -lX11 -llz4 -lssl -lcrypto
 
 OBJS = $(SRC:.cpp=.o)

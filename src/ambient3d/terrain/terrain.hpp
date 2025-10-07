@@ -8,11 +8,11 @@
 #include <cstddef>
 
 #include "chunk.hpp"
-#include "chunk_pos.hpp"
-#include "networking_agreements.hpp"
 #include "raylib.h"
-#include "geometry/rect.hpp"
-#include "ivec2.hpp"
+#include "shared/include/chunk_pos.hpp"
+#include "shared/include/geometry/rect.hpp"
+#include "shared/include/networking_agreements.hpp"
+#include "shared/include/ivec2.hpp"
 
 namespace AM {
 

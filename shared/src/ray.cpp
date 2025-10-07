@@ -1,4 +1,4 @@
-#include "ray.hpp"
+#include "../include/ray.hpp"
 
 #define E 0.000001f
 

@@ -12,9 +12,8 @@ using json = nlohmann::json;
 using namespace asio::ip;
 
 
-// From '../../shared'
-#include "packet_writer.hpp"
-#include "client_config.hpp"
+#include "shared/include/packet_writer.hpp"
+#include "shared/include/client_config.hpp"
 
 namespace AM {
     class Server;

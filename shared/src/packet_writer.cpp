@@ -3,7 +3,7 @@
 #include <chrono>
 #include <iostream>
 
-#include "packet_writer.hpp"
+#include "../include/packet_writer.hpp"
 
 
 void AM::Packet::allocate_memory() {

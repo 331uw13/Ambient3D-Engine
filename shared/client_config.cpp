@@ -21,6 +21,7 @@ AM::ClientConfig::ClientConfig(const char* json_cfg_path) {
 }
 
 void AM::ClientConfig::parse_from_memory(const json& data) {
+    this->items_directory = data["items_directory"].template get<std::string>();
     this->fonts_directory = data["fonts_directory"].template get<std::string>();
     this->font_file = data["font_file"].template get<std::string>();
     this->render_distance = data["render_distance"].template get<int>();

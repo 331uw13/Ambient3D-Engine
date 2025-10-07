@@ -27,12 +27,17 @@ using json = nlohmann::json;
 
 namespace AM {
 
+    class State;
     class ItemManager {
         public:
 
             ItemManager();
             ~ItemManager();
             void free();
+
+            void set_engine_state(AM::State* engine) {
+                m_engine = engine;
+            }
 
             void cleanup_unused_items(const Vector3& player_pos);     // < thread safe >
             void add_itembase_to_queue(const AM::ItemBase& itembase); // < thread safe >
@@ -42,7 +47,7 @@ namespace AM {
             void update_items_queue();
 
             void set_item_default_shader(const Shader& shader) { m_item_default_shader = shader; }
-            void set_server_config(const AM::ServerCFG& server_cfg) { m_server_cfg = server_cfg; }
+            //void set_server_config(const AM::ServerCFG& server_cfg) { m_server_cfg = server_cfg; }
             void set_item_list(const json& item_list) { m_item_list_json = item_list; }
 
             // TODO: Make this thread safe...
@@ -56,7 +61,8 @@ namespace AM {
 
             Shader                   m_item_default_shader;
             json                     m_item_list_json;
-            AM::ServerCFG            m_server_cfg;
+            AM::State*               m_engine;
+            //AM::ServerCFG            m_server_cfg;
 
             std::mutex               m_itembase_queue_mutex;
             std::deque<AM::ItemBase> m_itembase_queue;

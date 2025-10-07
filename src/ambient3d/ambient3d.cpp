@@ -170,6 +170,7 @@ AM::State::State(
    
     this->player.set_engine_state(this);
     this->terrain.set_engine_state(this);
+    this->item_manager.set_engine_state(this);
     this->terrain.create_chunk_materials();
     
     m_create_internal_timers();

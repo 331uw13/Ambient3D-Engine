@@ -100,7 +100,7 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         (void)sizeb;
         printf("[NETWORK]: Received server configuration.\n");
         this->server_cfg.parse_from_memory(json::parse(data));
-        m_engine->item_manager.set_server_config(this->server_cfg);
+        //m_engine->item_manager.set_server_config(this->server_cfg);
 
         //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_FULLY_CONNECTED);
         //this->packet.prepare(AM::PacketID::PLAYER_FULLY_CONNECTED);
@@ -549,7 +549,9 @@ void AM::Network::m_do_write_tcp() {
                 if(ec) {
                     printf("[write_tcp](%i): %s\n", ec.value(), ec.message().c_str());
                     return;
-                }               
+                }
+
+
             });
     
     this->packet.enable_flag(AM::Packet::FLG_COMPLETE);

@@ -1,6 +1,7 @@
 
-#include "ambient3d/ambient3d.hpp"
-#include "ambient3d/animation.hpp"
+#include "../src/ambient3d/ambient3d.hpp"
+#include "../src/ambient3d/animation.hpp"
+#include "../src/ambient3d/network/assets_downloader.hpp"
 
 #include <cstdio>
 #include <raymath.h>
@@ -11,7 +12,6 @@ struct GameState {
     AM::Renderable tree;
     AM::Renderable robot;
 
-    Material chunk_material;
 
 
     AM::Light** lightA { NULL };
@@ -58,10 +58,6 @@ void render_scene(AM::State* st, GameState* gst) {
 void main_loop(AM::State* st) {
 
     GameState gst;
-
-
-    gst.chunk_material = LoadMaterialDefault();
-    gst.chunk_material.shader = st->shaders[AM::ShaderIDX::DEFAULT];
 
     gst.tree.load("test_models/tree.glb", { st->shaders[AM::ShaderIDX::DEFAULT] });
     gst.tree.mesh_attribute(1, AM::MeshAttrib{ .affected_by_wind = true });
@@ -164,6 +160,11 @@ void main_loop(AM::State* st) {
 
 
 int main(int argc, char** argv) {
+
+    asio::io_context io_context;
+    AM::AssetsDownloader downloader(io_context, "127.0.0.1", "34470");
+    io_context.stop();
+
 
     AM::State st(1000, 800, 
             "Ambient3D - Development",

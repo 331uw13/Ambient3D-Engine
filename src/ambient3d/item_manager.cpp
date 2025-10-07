@@ -2,6 +2,7 @@
 #include <iostream>
 #include "item_manager.hpp"
 #include "raymath.h"
+#include "ambient3d.hpp"
 
             
 AM::ItemManager::ItemManager() {
@@ -29,7 +30,7 @@ void AM::ItemManager::cleanup_unused_items(const Vector3& player_pos) {
         const float dist_to_player = Vector3Distance(player_pos, Vector3(item->pos_x, item->pos_y, item->pos_z));
         
 
-        if(((dist_to_player > m_server_cfg.item_near_distance)
+        if(((dist_to_player > m_engine->net->server_cfg.item_near_distance)
         || (renderable_ptr.use_count() == 1))
         && renderable_ptr->is_loaded()) {
             renderable_ptr->unload();
@@ -49,7 +50,9 @@ void AM::ItemManager::m_load_item_data(AM::ItemBase* itembase) {
 
     AM::Renderable* renderable = m_item_renderables[item.id].get();
     if(!renderable->is_loaded()) {
-        if(!renderable->load(item.model_path, { m_item_default_shader })) {
+        std::string model_filepath = m_engine->config.items_directory + item.model_path;
+        if(!renderable->load(model_filepath.c_str(),
+                        { m_item_default_shader })) {
             fprintf(stderr, "[ITEM_MANAGER]: Failed to load item model \"%s\" for \"%s\"\n",
                     item.model_path, item.entry_name);
             return;

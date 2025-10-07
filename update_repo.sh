@@ -6,9 +6,8 @@ if [[ -z $1 ]]; then
 fi
 
 make clean
-#rm -rf ./raylib/build
 (cd server/ && make clean)
-
+(cd testing/ && make clean)
 
 git add .
 git commit -m "$1"

@@ -29,6 +29,7 @@ namespace AM {
                 m_server = server;
             }
 
+            std::mutex    inventory_mutex;
             AM::Inventory inventory;
 
             int id() const;                      // < thread safe >

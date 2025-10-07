@@ -82,6 +82,7 @@ void AM::Server::start(asio::io_context& io_context) {
 
     this->terrain.set_server(this);
 
+
     // Set random seed to current time.
     std::srand(std::time({}));
 
@@ -466,7 +467,7 @@ void AM::Server::m_update_loop_th__func() {
         m_send_player_chunk_updates();
         m_send_player_updates();
         m_send_item_updates();
-
+        m_send_player_itemuuid_unloads();
 
         m_update_timer.stop();
         const double update_delta_time_ms = m_update_timer.delta_time_ms();
@@ -628,3 +629,45 @@ void AM::Server::spawn_item(AM::ItemID item_id, int count, const Vec3& pos) {
     this->dropped_items_mutex.unlock();
 }
 
+            
+            
+void AM::Server::unload_dropped_item(int item_uuid) {
+    std::lock_guard<std::mutex> lock(m_player_itemuuid_unload_queue_mutex);   
+    m_player_itemuuid_unload_queue.push_back(item_uuid);
+}
+
+
+void AM::Server::m_send_player_itemuuid_unloads() {
+    std::lock_guard<std::mutex> lock1(m_player_itemuuid_unload_queue_mutex);
+    std::lock_guard<std::mutex> lock2(this->dropped_items_mutex);
+
+    for(size_t item_i = 0; item_i < m_player_itemuuid_unload_queue.size(); item_i++) {
+        int item_uuid = m_player_itemuuid_unload_queue[item_i];
+
+        auto item_search = this->dropped_items.find(item_uuid);
+        if(item_search == this->dropped_items.end()) {
+            continue;
+        }
+
+        AM::ItemBase& itembase = item_search->second;
+        AM::Vec3 item_pos = AM::Vec3(itembase.pos_x, itembase.pos_y, itembase.pos_z);
+
+        for(auto player_it = this->players.begin(); 
+                player_it != this->players.end(); ++player_it)  {
+
+            AM::Player* player = player_it->second;
+
+            if(item_pos.distance(player->position()) > this->config.item_near_distance) {
+                continue; // Too far away, player doesnt have this item unloaded.
+            }
+
+            player->tcp_session->packet.prepare(AM::PacketID::PLAYER_UNLOAD_DROPPED_ITEM);
+            player->tcp_session->packet.write<int>({ itembase.uuid });
+            player->tcp_session->send_packet();
+        }
+
+        this->dropped_items.erase(item_search);
+    }
+
+    m_player_itemuuid_unload_queue.clear();
+}

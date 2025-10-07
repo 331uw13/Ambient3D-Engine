@@ -424,6 +424,17 @@ void AM::State::m_update_dropped_items() {
         if(!(m_flags & AM::StateFlags::DONT_RENDER_DEFAULT_ITEMINFO)) {
             m_render_default_iteminfo(item);
         }
+
+        if(IsKeyPressed(KEY_E)) {
+            float distance = Vector3Distance(
+                    Vector3(item->pos_x, item->pos_y, item->pos_z),
+                    this->player.position());
+            if(distance < this->net->server_cfg.item_pickup_distance) {
+                this->net->packet.prepare(AM::PacketID::PLAYER_PICKUP_ITEM);
+                this->net->packet.write<int>({ item->uuid });
+                this->net->send_packet(AM::NetProto::TCP);
+            }
+        }
     }
 }
             

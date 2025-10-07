@@ -116,7 +116,8 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                     
                 AM::Player* player = m_server->get_player_by_id(this->player_id);
                 if(!player) {
-                    fprintf(stderr, "ERROR! %s: Cant find player with ID = %i\n", this->player_id);
+                    fprintf(stderr, "[NETWORK](PLAYER_UNLOADED_CHUNKS):"
+                            " Cant find player with ID = %i\n", this->player_id);
                     return;
                 }
 
@@ -139,6 +140,44 @@ void AM::TCP_session::m_handle_received_packet(size_t sizeb) {
                 }
 
                 printf("Unloaded %i chunks for player: %i\n", num_chunks, this->player_id);
+            }
+            break;
+
+        case AM::PacketID::PLAYER_PICKUP_ITEM:
+            if(sizeb != AM::PacketSize::PLAYER_PICKUP_ITEM) {
+                fprintf(stderr, "[NETWORK] Unexpected packet size for: "
+                        "PLAYER_PICKUP_ITEM (Got: %li bytes)\n", sizeb);
+                return;
+            }
+            {
+                AM::Player* player = m_server->get_player_by_id(this->player_id);
+                if(!player) {
+                    fprintf(stderr, "[NETWORK](PLAYER_PICKUP_ITEM):"
+                            " Cant find player with ID = %i\n", this->player_id);
+                    return;
+                }
+
+                int item_uuid = 0;
+                memmove(&item_uuid, m_data, sizeof(item_uuid));
+                
+                std::lock_guard<std::mutex> lock1(m_server->dropped_items_mutex);
+
+                auto item_search = m_server->dropped_items.find(item_uuid);
+                if(item_search == m_server->dropped_items.end()) {
+                    fprintf(stderr, "[NETWORK](PLAYER_PICKUP_ITEM): "
+                            "Cant find item with uuid %i\n", item_uuid);
+                    return;
+                }
+
+                AM::ItemBase& itembase = item_search->second;
+
+                std::lock_guard<std::mutex> lock2(player->inventory_mutex);
+                player->inventory.add_itembase(itembase);
+
+                m_server->unload_dropped_item(itembase.uuid);
+                //m_server->dropped_items.erase(item_search);
+                
+                printf("PLAYER_PICKUP_ITEM %s\n", itembase.display_name);
             }
             break;
 

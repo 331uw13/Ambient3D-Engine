@@ -2,6 +2,7 @@
 #define AMBIENT3D_INVENTORY_HPP
 
 #include <cstdint>
+#include <mutex>
 
 #include "item_base.hpp"
 
@@ -39,6 +40,7 @@ namespace AM {
 
         private:
 
+            std::mutex    m_mutex;
             InventorySize m_size;
             AM::ItemBase* m_items { NULL };
 

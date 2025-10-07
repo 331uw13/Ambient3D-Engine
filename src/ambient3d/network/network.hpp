@@ -92,8 +92,9 @@ namespace AM {
             // The callbacks are called from 
             // network event handler thread and not the main thread.
 
-            void add_packet_callback  // < thread safe >
-                (AM::NetProto protocol, AM::PacketID packet_id, 
+            void add_packet_callback(
+                    AM::NetProto protocol,
+                    AM::PacketID packet_id,
                     std::function<void(float /*interval_ms*/, char* /*data*/, size_t /*sizeb*/)> callback);
 
             float get_packet_interval_ms(AM::PacketID packet_id); // < thread safe >

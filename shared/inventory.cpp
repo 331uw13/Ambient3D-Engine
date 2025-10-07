@@ -53,6 +53,7 @@ AM::ItemBase* AM::Inventory::get_item_from_xy(uint8_t slot_x, uint8_t slot_y) {
 }
 
 AM::ItemBase* AM::Inventory::get_item_from_index(uint16_t index) {
+    std::lock_guard<std::mutex> lock(m_mutex);
     if(!m_items) { 
         return NULL;
     }

@@ -148,6 +148,24 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         printf("[NETWORK]: Received timeofday sync: %f\n", timeofday_sync);
     });
 
+    this->add_packet_callback(
+    AM::NetProto::TCP,
+    AM::PacketID::PLAYER_UNLOAD_DROPPED_ITEM,
+    [this](float interval_ms, char* data, size_t sizeb) {
+        (void)interval_ms;
+        if(sizeb != AM::PacketSize::PLAYER_UNLOAD_DROPPED_ITEM) {
+            fprintf(stderr, "ERROR! Packet size(%li) doesnt match expected size "
+                    "for PLAYER_UNLOAD_DROPPED_ITEM\n", sizeb);
+            return;
+        }
+
+        int item_uuid = 0;
+        memmove(&item_uuid, data, sizeof(item_uuid));
+
+        m_engine->item_manager.add_itemuuid_removed(item_uuid);
+        printf("PLAYER_UNLOAD_DROPPED_ITEM %i\n", item_uuid);
+
+    });
 }
 
 
@@ -357,6 +375,7 @@ void AM::Network::m_attach_main_UDP_packet_callbacks() {
         this->dynamic_data.set_float(AM::NDD_ID::FOG_DENSITY, fog_density);
         this->dynamic_data.set_vector3(AM::NDD_ID::FOG_COLOR, Vector3(fog_color[0], fog_color[1], fog_color[2]));
     });
+
 }
 
 
@@ -392,9 +411,11 @@ void AM::Network::m_call_packet_callbacks(AM::NetProto protocol, AM::PacketID pa
     }
 }
 
-void AM::Network::add_packet_callback
-                (AM::NetProto protocol, AM::PacketID packet_id, 
-                    std::function<void(float /*interval_ms*/, char* /*data*/, size_t /*sizeb*/)> callback) {
+void AM::Network::add_packet_callback(
+        AM::NetProto protocol,
+        AM::PacketID packet_id, 
+        std::function<void(float /*interval_ms*/, char* /*data*/, size_t /*sizeb*/)> callback
+){
     std::lock_guard<std::mutex> lock(m_packet_callbacks_mutex);
 
     if(protocol == AM::NetProto::TCP) {

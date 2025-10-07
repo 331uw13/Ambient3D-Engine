@@ -64,8 +64,8 @@ namespace AM {
 
             void spawn_item(AM::ItemID item_id, int count, const Vec3& pos);
             void broadcast_msg(AM::PacketID packet_id, const std::string& str);
-
             void load_item_template(const char* entry_name, AM::ItemID item_id);
+            void unload_dropped_item(int item_uuid); // < thread safe >
 
             std::atomic<bool> show_debug_info { false };
 
@@ -96,6 +96,17 @@ namespace AM {
             AM::Timer    m_update_timer; // Measures time how long update took for the tick.
             AM::Timer    m_tick_timer;   // Measures how long the tick was.
 
+
+            // When server wants to unload dropped item.
+            // It will call void unload_dropped_item(int item_uuid);
+            // The item_uuid is added to a queue and its processed every tick.
+            // Server will send all players near the item
+            // that its unloaded as a "dropped item" and
+            // then will remove the dropped item from this->dropped_items unordered map.
+            std::mutex       m_player_itemuuid_unload_queue_mutex;
+            std::vector<int> m_player_itemuuid_unload_queue;
+            void             m_send_player_itemuuid_unloads();
+
             void         m_worldgen_th__func();
             std::thread  m_worldgen_th;
             int          m_worldgen_seed { 0 }; // <- Not curently used but for future improvements.
@@ -117,8 +128,6 @@ namespace AM {
     
     };
 };
-
-
 
 
 

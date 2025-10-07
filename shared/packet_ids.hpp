@@ -14,6 +14,9 @@
 // But this depends alot on what kind of data is being sent/received
 //
 
+
+#include <unordered_map>
+
 namespace AM {
 
 
@@ -236,7 +239,18 @@ namespace AM {
         // ---------------------------------
         // 0            :  Packet ID        (int)
         // 4            :  Item UUID        (int)
-        PICKUP_ITEM,
+        PLAYER_PICKUP_ITEM, // (tcp only)
+
+        // When client will pickup an item they will send the PLAYER_PICKUP_ITEM
+        // packet and the server is going to
+        // remove the item from dropped_items unordered_map
+        // then sends this packet to players near the item telling its no longer there.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Item UUID        (int)
+        PLAYER_UNLOAD_DROPPED_ITEM, // (tcp only)
 
 
         NUM_PACKETS
@@ -253,6 +267,8 @@ namespace AM {
         static constexpr size_t PLAYER_JUMP = 4;
         static constexpr size_t TIMEOFDAY_SYNC = 4;
         static constexpr size_t WEATHER_DATA = 16;
+        static constexpr size_t PLAYER_PICKUP_ITEM = 4;
+        static constexpr size_t PLAYER_UNLOAD_DROPPED_ITEM = 4;
     };
 };
 

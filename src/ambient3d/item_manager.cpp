@@ -21,6 +21,8 @@ AM::ItemManager::~ItemManager() {
 
 
 void AM::ItemManager::cleanup_unused_items(const Vector3& player_pos) { 
+    m_itembase_queue_mutex.unlock();
+    
     for(auto it = m_dropped_items.begin(); it != m_dropped_items.end(); ) {
         AM::Item* item = &it->second;
         std::shared_ptr<AM::Renderable>& renderable_ptr = m_item_renderables[item->id];
@@ -96,7 +98,7 @@ void AM::ItemManager::m_update_item_data(AM::ItemBase* itembase) {
 
 
 void AM::ItemManager::update_items_queue() {
-    m_itembase_queue_mutex.lock();
+    std::lock_guard<std::mutex> lock(m_itembase_queue_mutex);
     for(size_t i = 0; i < m_itembase_queue.size(); i++) {
         AM::ItemBase* itembase = &m_itembase_queue[i];
         if(itembase->id >= AM::NUM_ITEMS) {
@@ -113,13 +115,29 @@ void AM::ItemManager::update_items_queue() {
     }
 
     m_itembase_queue.clear();
-    m_itembase_queue_mutex.unlock();
+
+
+    // Remove unloaded items.
+    for(size_t i = 0; i < m_removed_itemuuid_queue.size(); i++) {
+        auto item_search = m_dropped_items.find(m_removed_itemuuid_queue[i]);
+        if(item_search == m_dropped_items.end()) {
+            continue;
+        }
+
+        m_dropped_items.erase(item_search);
+    }
+
+    m_removed_itemuuid_queue.clear();
 }
 
 void AM::ItemManager::add_itembase_to_queue(const AM::ItemBase& itembase) {
-    m_itembase_queue_mutex.lock();
+    std::lock_guard<std::mutex> lock(m_itembase_queue_mutex);
     m_itembase_queue.push_back(itembase);
-    m_itembase_queue_mutex.unlock();
 }
 
+            
+void AM::ItemManager::add_itemuuid_removed(int item_uuid) {
+    std::lock_guard<std::mutex> lock(m_itembase_queue_mutex);
+    m_removed_itemuuid_queue.push_back(item_uuid);
+}
 

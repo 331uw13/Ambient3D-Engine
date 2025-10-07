@@ -4,10 +4,11 @@ CXX = g++
 TARGET_NAME = game_assets_server
 
 
-SRC = $(shell find ./src -type f -name *.cpp)
+SRC  = $(shell find ./src -type f -name *.cpp)
+SRC += $(shell find ../../shared -type f -name *.cpp)
 OBJS = $(SRC:.cpp=.o)
 
-LIBS = -llz4
+LIBS = -llz4 -lssl -lcrypto
 
 all: $(TARGET_NAME)
 

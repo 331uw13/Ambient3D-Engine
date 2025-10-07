@@ -4,10 +4,11 @@
 #include <memory>
 #include <asio.hpp>
 
+#include "config.hpp"
+#include "../../../shared/networking_agreements.hpp"
+
 using namespace asio::ip;
 
-
-#include "config.hpp"
 
 
 namespace AM {
@@ -15,16 +16,20 @@ namespace AM {
 
     class TCP_session : public std::enable_shared_from_this<TCP_session> {
         public:
-            TCP_session(tcp::socket socket) : m_socket(std::move(socket)) {};
+            TCP_session(const AM::Config& config, tcp::socket socket) 
+                : m_config(config), m_socket(std::move(socket)) {};
             void start() { m_do_read(); }
+
+            void write_bytes(char* bytes, size_t sizeb);
 
         private:
 
-            void m_do_read();
-            tcp::socket  m_socket;
+            AM::Config    m_config;
+            tcp::socket   m_socket;
+            void          m_do_read();
 
             void m_handle_received_packet(size_t size);
-            char m_data[Config::MAX_PACKET_SIZE+1] { 0 };
+            char m_data[AM::MAX_PACKET_SIZE] { 0 };
     };
 
 };

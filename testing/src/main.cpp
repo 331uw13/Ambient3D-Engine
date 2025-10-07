@@ -163,8 +163,11 @@ int main(int argc, char** argv) {
 
     asio::io_context io_context;
     AM::AssetsDownloader downloader(io_context, "127.0.0.1", "34470");
+    
     io_context.stop();
 
+
+    /*
 
     AM::State st(1000, 800, 
             "Ambient3D - Development",
@@ -178,6 +181,7 @@ int main(int argc, char** argv) {
     if(st.ready) {
         main_loop(&st);
     }
+    */
    
     return 0;
 }

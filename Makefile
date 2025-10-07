@@ -13,7 +13,7 @@ AMBIENT3D_SHARED = ./shared
 
 
 LIBS = -L$(RAYLIB_PATH) -Wl,-rpath,$(RAYLIB_PATH) -lraylib_modified \
-	   -lGL -lm -lpthread -ldl -lrt -lX11 -llz4
+	   -lGL -lm -lpthread -ldl -lrt -lX11 -llz4 -lssl -lcrypto
 
 OBJS = $(SRC:.cpp=.o)
 

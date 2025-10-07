@@ -13,15 +13,16 @@ void AM::TCP_session::m_handle_received_packet(size_t size) {
 }
 
 
+
 void AM::TCP_session::m_do_read() {
     
-    memset(m_data, 0, Config::MAX_PACKET_SIZE);
+    memset(m_data, 0, AM::MAX_PACKET_SIZE);
 
     //const std::shared_ptr<TCP_session>& self(shared_from_this());
-    m_socket.async_read_some(asio::buffer(m_data, Config::MAX_PACKET_SIZE),
+    m_socket.async_read_some(asio::buffer(m_data, AM::MAX_PACKET_SIZE),
             [this](std::error_code ec, std::size_t size) {
                 if(ec) {
-                    printf("[read_tcp](%i): %s\n", ec.value(), ec.message().c_str());
+                    printf("[read](%i): %s\n", ec.value(), ec.message().c_str());
                     // TODO: Remove client.
                 }
                 else {
@@ -32,6 +33,14 @@ void AM::TCP_session::m_do_read() {
             });
 }
 
+void AM::TCP_session::write_bytes(char* bytes, size_t sizeb) {
+    asio::async_write(m_socket, asio::buffer(bytes, sizeb),
+            [this](std::error_code ec, std::size_t) {
+                if(ec) {
+                    fprintf(stderr, "[write](%i): %s\n", ec.value(), ec.message().c_str());
+                }
+            });
+}
 
 /*
 void AM::TCP_session::send_packet() {

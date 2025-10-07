@@ -1,0 +1,10 @@
+{
+
+    "port": 34470,
+    "host_dir": "../../items",
+    
+    "allowed_file_extensions": {
+        "models": ".glb|.gltf",
+        "textures": ".png|.jpg"
+    }
+}

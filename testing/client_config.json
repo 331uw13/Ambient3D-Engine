@@ -1,5 +1,5 @@
 {
-    "items_directory": "../items/",
+    "game_assets_directory": "./game_assets/",
     "fonts_directory": "./fonts/",
     "font_file": "OpenSans-BoldItalic.ttf",
     "render_distance": 12

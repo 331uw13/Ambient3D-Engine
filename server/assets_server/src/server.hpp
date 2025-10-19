@@ -11,7 +11,11 @@ namespace AM {
     class GameAssetsServer {
         public:
 
-            GameAssetsServer(const AM::Config& config, asio::io_context& context);
+            GameAssetsServer(
+                    const AM::Config& config,
+                    AM::AssetFileStorage* file_storage,
+                    asio::io_context& context);
+
             ~GameAssetsServer();
 
             void start(asio::io_context& context);
@@ -22,6 +26,7 @@ namespace AM {
 
             std::vector<std::shared_ptr<AM::TCP_session>> m_clients;
 
+            AM::AssetFileStorage* m_file_storage;
             AM::Config     m_config;
             void           m_do_accept_tcp();
             tcp::acceptor  m_tcp_acceptor;

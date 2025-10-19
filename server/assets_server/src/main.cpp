@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     AM::compute_asset_file_hashes(&file_storage);
 
     asio::io_context io_context;
-    AM::GameAssetsServer server(config, io_context);
+    AM::GameAssetsServer server(config, &file_storage, io_context);
     server.start(io_context);
 
     return 0;

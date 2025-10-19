@@ -3,9 +3,12 @@
 
 #include <memory>
 #include <asio.hpp>
+#include <deque>
 
 #include "config.hpp"
+#include "asset_files.hpp"
 #include "shared/include/networking_agreements.hpp"
+#include "shared/include/packet_writer.hpp"
 
 using namespace asio::ip;
 
@@ -16,19 +19,39 @@ namespace AM {
 
     class TCP_session : public std::enable_shared_from_this<TCP_session> {
         public:
-            TCP_session(const AM::Config& config, tcp::socket socket) 
-                : m_config(config), m_socket(std::move(socket)) {};
-            void start() { m_do_read(); }
+            TCP_session(const AM::Config& config, AM::AssetFileStorage* file_storage, tcp::socket socket) : 
+                m_config(config), 
+                m_file_storage(file_storage),
+                m_socket(std::move(socket)) {};
 
-            void write_bytes(char* bytes, size_t sizeb);
+
+            AM::Packet packet;
+            void send_packet();
+
+            void start();
+            //void write_bytes(char* bytes, size_t sizeb);
 
         private:
 
-            AM::Config    m_config;
-            tcp::socket   m_socket;
-            void          m_do_read();
+            AM::Config             m_config;
+            AM::AssetFileStorage*  m_file_storage;
+            tcp::socket            m_socket;
 
-            void m_handle_received_packet(size_t size);
+
+            std::deque<AM::AssetFile> m_download_queue;
+            void    m_do_read();
+            void    m_handle_recv_data(size_t size);
+
+            void    m_send_download_queue_next_fileinfo();
+            void    m_read_next_file_for_sending();
+            void    m_send_download_queue_next_bytes();
+
+            char*   m_current_file_bytes { NULL };
+            size_t  m_current_file_size { 0 };
+            size_t  m_current_file_byteoffset { 0 };
+            bool    m_current_file_complete { false };
+
+            // Packet data. TODO: Rename,
             char m_data[AM::MAX_PACKET_SIZE] { 0 };
     };
 

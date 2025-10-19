@@ -161,16 +161,19 @@ void main_loop(AM::State* st) {
 
 int main(int argc, char** argv) {
 
+    AM::ClientConfig client_config("client_config.json");
+
     asio::io_context io_context;
-    AM::AssetsDownloader downloader(io_context, "127.0.0.1", "34470");
-    
-    io_context.stop();
+    AM::AssetsDownloader downloader(client_config, io_context, "127.0.0.1", "34470");
+   
+    downloader.update_assets();
+    downloader.close_connection(io_context);
 
 
-
+    /*
     AM::State st(1000, 800, 
-            "Ambient3D - Development",
-            "client_config.json",
+            "Ambient3D - Development", 
+            client_config,
             AM::NetConnectCFG { 
                 .host      = "127.0.0.1",
                 .tcp_port  = "34482",
@@ -180,6 +183,7 @@ int main(int argc, char** argv) {
     if(st.ready) {
         main_loop(&st);
     }
+    */
    
     return 0;
 }

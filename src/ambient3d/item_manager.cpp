@@ -50,7 +50,7 @@ void AM::ItemManager::m_load_item_data(AM::ItemBase* itembase) {
 
     AM::Renderable* renderable = m_item_renderables[item.id].get();
     if(!renderable->is_loaded()) {
-        std::string model_filepath = m_engine->config.items_directory + item.model_path;
+        std::string model_filepath = m_engine->config.game_asset_dir + item.model_path;
         if(!renderable->load(model_filepath.c_str(),
                         { m_item_default_shader })) {
             fprintf(stderr, "[ITEM_MANAGER]: Failed to load item model \"%s\" for \"%s\"\n",

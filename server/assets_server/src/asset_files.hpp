@@ -14,6 +14,7 @@ namespace AM {
         std::string full_path;
         std::string name;
         std::string sha256_hash;
+        std::string type_group; // "textures" or "models"
     };
 
 

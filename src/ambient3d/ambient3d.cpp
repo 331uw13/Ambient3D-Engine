@@ -9,10 +9,10 @@ AM::State::State(
         uint16_t win_width,
         uint16_t win_height, 
         const char* title,
-        const char* config_file,
+        const AM::ClientConfig& config,
         AM::NetConnectCFG network_cfg) {
  
-    this->config = AM::ClientConfig(config_file);
+    this->config = config;//AM::ClientConfig(config_file);
 
     // Initialize network.
 

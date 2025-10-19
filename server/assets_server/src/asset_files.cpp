@@ -40,7 +40,8 @@ static void scan_directories(
             file_storage->texture_files.push_back({ 
                     .size = entry.file_size(),
                     .full_path = entry.path(),
-                    .name = filename,
+                    .name = entry.path().filename(),
+                    .type_group = "textures"
             });
         }
         else
@@ -49,7 +50,8 @@ static void scan_directories(
             file_storage->model_files.push_back({ 
                             .size = entry.file_size(),
                     .full_path = entry.path(),
-                    .name = filename,
+                    .name = entry.path().filename(),
+                    .type_group = "models"
             });
         }
         else {

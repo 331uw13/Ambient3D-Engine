@@ -253,6 +253,62 @@ namespace AM {
         PLAYER_UNLOAD_DROPPED_ITEM, // (tcp only)
 
 
+        // ========== Game Asset files Server/Client Packets ===========
+
+        // When client connects to assets file server
+        // they will send sha256 hashes of file they have downloaded.
+        //
+        // Byte offset  |  Value name
+        // ---------------------------------
+        // 0            :  Packet ID        (int)
+        // 4            :  Asset files      (json data)
+        CLIENT_GAMEASSET_FILE_HASHES, // (tcp only)
+
+        // Assets file server will send list of downloadable assets.
+        // The client must accept it before they continue.
+        //
+        // byte offset  |  value name
+        // ---------------------------------
+        // 0            :  packet id        (int)
+        // 4            :  Total bytes      (int)
+        // 8            :  Filenames        (json data)
+        DO_ACCEPT_ASSETS_DOWNLOAD, // (tcp only)
+
+        // If the client accepts the download they will send this packet.
+        // And if they dont, nothing will happen.
+        ACCEPTED_ASSETS_DOWNLOAD,
+
+
+        // When client starts to download a file
+        // they will first receive the filename and the type.
+        //
+        // byte offset  |  value name
+        // ---------------------------------
+        // 0            :  packet id        (int)
+        // 4            :  File info        (json data)
+        CREATE_ASSET_FILE,
+
+        // Client responds with this packet 
+        // when the asset file has been created and opened for writing.
+        CLIENT_CREATED_ASSET_FILE,
+
+        // Then will begin the file bytes transfer.
+        //
+        // byte offset  |  value name
+        // ---------------------------------
+        // 0            :  packet id        (int)
+        // 4            :  bytes            (char)  (number of bytes is MAX_PACKET_SIZE)
+        ASSET_FILE_BYTES,
+
+        // When client got some file bytes they must send 
+        // this packet to continue receiving data.
+        GOT_SOME_FILE_BYTES,
+
+        // When the server sees every byte was sent, 
+        // this packet id is sent after.
+        ASSET_FILE_END,
+
+
         NUM_PACKETS
     };
 

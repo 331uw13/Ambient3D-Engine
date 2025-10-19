@@ -5,10 +5,15 @@
 
 
 
-AM::GameAssetsServer::GameAssetsServer(const AM::Config& config, asio::io_context& context
-) : m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), config.port)) {
-    
-
+AM::GameAssetsServer::GameAssetsServer(
+        const AM::Config& config,
+        AM::AssetFileStorage* file_storage,
+        asio::io_context& context
+) :
+    m_file_storage(file_storage),
+    m_tcp_acceptor(context, tcp::endpoint(tcp::v4(), config.port)) {
+   
+    m_config = config;
 }
 
 AM::GameAssetsServer::~GameAssetsServer() {
@@ -33,12 +38,11 @@ void AM::GameAssetsServer::m_do_accept_tcp() {
 
         printf("Client connected.\n");
 
-        m_clients.push_back(std::make_shared<AM::TCP_session>(m_config, std::move(socket)));
+        m_clients.push_back(std::make_shared<AM::TCP_session>(m_config, m_file_storage, std::move(socket)));
         m_clients.back()->start();
 
         m_do_accept_tcp();
     });
 }
-
 
 

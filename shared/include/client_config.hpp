@@ -15,7 +15,7 @@ namespace AM {
         ClientConfig(const char* json_cfg_path);
         void parse_from_memory(const json& data);
 
-        std::string items_directory;
+        std::string game_asset_dir;
         std::string fonts_directory;
         std::string font_file;
         int render_distance;

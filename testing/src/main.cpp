@@ -9,9 +9,10 @@
 
 
 struct GameState {
-    AM::Renderable tree;
-    AM::Renderable robot;
+    //AM::Renderable tree;
+    //AM::Renderable robot;
 
+    AM::Renderable robot; // test player model.
 
 
     AM::Light** lightA { NULL };
@@ -30,7 +31,7 @@ void render_scene(AM::State* st, GameState* gst) {
     DrawSphere((*gst->lightC)->pos, 1.0f, (*gst->lightC)->color);
     DrawSphere((*gst->lightD)->pos, 1.0f, (*gst->lightD)->color);
 
-    gst->tree.render();
+    //gst->tree.render();
  
 
     // Render other players in the server.
@@ -59,13 +60,13 @@ void main_loop(AM::State* st) {
 
     GameState gst;
 
-    gst.tree.load("test_models/tree.glb", { st->shaders[AM::ShaderIDX::DEFAULT] });
-    gst.tree.mesh_attribute(1, AM::MeshAttrib{ .affected_by_wind = true });
+    //gst.tree.load("test_models/tree.glb", { st->shaders[AM::ShaderIDX::DEFAULT] });
+    //gst.tree.mesh_attribute(1, AM::MeshAttrib{ .affected_by_wind = true });
     
     //gst.gun.load("test_models/m4.glb", { st->shaders[AM::ShaderIDX::DEFAULT] });
     //*gst.gun.transform = MatrixTranslate(7, 2, 20);
 
-    gst.robot.load("test_models/robot.glb",
+    gst.robot.load("game_assets/models/test_player.glb",
             { st->shaders[AM::ShaderIDX::DEFAULT] },
             AM::RLF_MESH_TRANSFORMS | AM::RLF_ANIMATIONS );
 
@@ -94,18 +95,20 @@ void main_loop(AM::State* st) {
             .cutoff = 1.0f, .strength = 10.0f });
     //--------------------------------------------
 
-    AM::Chatbox* chatbox = st->find_gui_module<AM::Chatbox>(AM::GuiModuleID::CHATBOX);
+    //AM::Chatbox* chatbox = st->find_gui_module<AM::Chatbox>(AM::GuiModuleID::CHATBOX);
 
 
 
     while(!WindowShouldClose()) {
 
+
+
         if(IsKeyPressed(KEY_TAB)) {
-            st->set_gui_module_focus(AM::GuiModuleID::CHATBOX, AM::GuiModuleFocus::TOGGLE);
             st->set_mouse_enabled(!st->is_mouse_enabled());
             st->set_movement_enabled(!st->is_movement_enabled());
         }
         
+        /*
         if(IsKeyPressed(KEY_ENTER)) {
             if(chatbox->has_focus && !chatbox->text_input.empty()) {
                 st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
@@ -114,26 +117,7 @@ void main_loop(AM::State* st) {
                 chatbox->text_input.clear();
             }
         }
-
-        if(IsKeyPressed(KEY_K)) {    
-            std::thread test_th_1([st](){
-                printf("TEST_TRHEAD 1  Preparing packet.\n");
-                st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
-                st->net->packet.write<int>({  123, 23, 2378, 283, 23, 232, 3,2, 3,3,  });
-                st->net->send_packet(AM::NetProto::UDP);
-            });
-
-            std::thread test_th_2([st](){
-                printf("TEST_TRHEAD 2  Preparing packet.\n");
-                st->net->packet.prepare(AM::PacketID::CHAT_MESSAGE);
-                printf("TEST_THREAD 1  Finished writing.\n");
-                st->net->packet.write<int>({  123, 23 });
-                st->net->send_packet(AM::NetProto::UDP);
-            });
-
-            test_th_1.join();
-            test_th_2.join();
-        }
+        */
 
 
         (*gst.lightB)->pos.x += sin(GetTime()) * 0.01;
@@ -155,7 +139,6 @@ void main_loop(AM::State* st) {
     printf("Stopping...\n");
   
     gst.robot.unload();
-    gst.tree.unload();
 }
 
 
@@ -170,7 +153,6 @@ int main(int argc, char** argv) {
     downloader.close_connection(io_context);
 
 
-    /*
     AM::State st(1000, 800, 
             "Ambient3D - Development", 
             client_config,
@@ -183,7 +165,6 @@ int main(int argc, char** argv) {
     if(st.ready) {
         main_loop(&st);
     }
-    */
    
     return 0;
 }

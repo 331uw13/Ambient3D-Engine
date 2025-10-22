@@ -51,6 +51,9 @@ namespace AM {
             size_t  m_current_file_byteoffset { 0 };
             bool    m_current_file_complete { false };
 
+            bool    m_match_client_filehash(
+                    const json& client_filehashes_json, const AM::AssetFile& file);
+
             // Packet data. TODO: Rename,
             char m_data[AM::MAX_PACKET_SIZE] { 0 };
     };

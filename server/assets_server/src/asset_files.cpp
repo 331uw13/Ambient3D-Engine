@@ -74,6 +74,11 @@ void AM::find_asset_files(const AM::Config& config, AM::AssetFileStorage* file_s
 
 
 void AM::compute_asset_file_hashes(AssetFileStorage* file_storage) {
+    file_storage->foreach_file([](AM::AssetFile& file) {
+        AM::compute_sha256_filehash(file.full_path, &file.sha256_hash);
+    });
+    
+    /*
     for(AM::AssetFile& file : file_storage->texture_files) {
         AM::compute_sha256_filehash(file.full_path, &file.sha256_hash);
     }
@@ -83,8 +88,17 @@ void AM::compute_asset_file_hashes(AssetFileStorage* file_storage) {
     for(AM::AssetFile& file : file_storage->audio_files) {
         AM::compute_sha256_filehash(file.full_path, &file.sha256_hash);
     }
+    */
 }
-
-
-
-
+ 
+void AM::AssetFileStorage::foreach_file(std::function<void(AM::AssetFile&)> callback) {
+    for(AM::AssetFile& file : this->texture_files) {
+        callback(file);
+    }
+    for(AM::AssetFile& file : this->model_files) {
+        callback(file);
+    }
+    for(AM::AssetFile& file : this->audio_files) {
+        callback(file);
+    }
+}

@@ -80,6 +80,7 @@ void AM::AssetsDownloader::m_handle_recv_data(size_t size) {
                 std::string filegroup = fileinfo["filegroup"].template get<std::string>();
                 size_t      filesize  = fileinfo["filesize"].template get<size_t>();
 
+                m_downloaded_bytes = 0;
                 m_download_sizeb = filesize;
                 m_download_filename = filename;
 
@@ -107,7 +108,7 @@ void AM::AssetsDownloader::m_handle_recv_data(size_t size) {
                         filepath.c_str(), filesize);
                 */
 
-                printf("\n\n");
+                printf("\n");
                 m_packet.prepare(AM::PacketID::CLIENT_CREATED_ASSET_FILE);
                 m_send_packet();
             }
@@ -121,7 +122,7 @@ void AM::AssetsDownloader::m_handle_recv_data(size_t size) {
 
             m_downloaded_bytes += size;
 
-            printf("\033[1A %20s - %li / %li bytes\n", 
+            printf("\033[1A Downloading: %-20s - %li / %li bytes\n", 
                     m_download_filename.c_str(),
                     m_downloaded_bytes,
                     m_download_sizeb);
@@ -144,8 +145,11 @@ void AM::AssetsDownloader::m_handle_recv_data(size_t size) {
 
 
         case AM::PacketID::ASSET_FILE_END:
-            printf("+ Download complete!\n");
-            m_download_file.close();
+            printf("[AssetsDownloader]: Finished.\n");
+            if(m_download_file.is_open()) {
+                m_download_file.close();
+            }
+            m_keep_connection_alive = false;
             break;
     }
 }
@@ -226,6 +230,16 @@ void AM::AssetsDownloader::update_assets() {
     printf("[AssetsDownloader]: Found %li local files.\n", 
             local_texture_files.size() + local_model_files.size() + local_audio_files.size());
 
+    for(mAssetFile& file : local_texture_files) {
+        data[file.name] = file.sha256_hash;
+    }
+    for(mAssetFile& file : local_model_files) {
+        data[file.name] = file.sha256_hash;
+    }
+    for(mAssetFile& file : local_audio_files) {
+        data[file.name] = file.sha256_hash;
+    }
+    /*
     for(size_t i = 0; i < local_texture_files.size(); i++) {
         mAssetFile& file = local_texture_files[i];
         data[file.type][i] = { file.name, file.sha256_hash };
@@ -240,6 +254,7 @@ void AM::AssetsDownloader::update_assets() {
         mAssetFile& file = local_audio_files[i];
         data[file.type][i] = { file.name, file.sha256_hash };
     }
+    */
 
 
     m_packet.prepare(AM::PacketID::CLIENT_GAMEASSET_FILE_HASHES);

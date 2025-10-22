@@ -18,7 +18,6 @@
 #include "../item_manager.hpp"
 #include "../terrain/terrain.hpp"
 
-#include "../gui/chatbox.hpp"
 
 using json = nlohmann::json;
 

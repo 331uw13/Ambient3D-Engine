@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include "config.hpp"
 
@@ -22,6 +23,8 @@ namespace AM {
         std::vector<AssetFile> texture_files;
         std::vector<AssetFile> model_files;
         std::vector<AssetFile> audio_files;
+        
+        void foreach_file(std::function<void(AssetFile&)> callback);
     };
 
     void find_asset_files(const AM::Config& config, AssetFileStorage* file_storage);

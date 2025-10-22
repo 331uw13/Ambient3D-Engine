@@ -89,8 +89,7 @@ void AM::TCP_session::m_send_download_queue_next_bytes() {
     this->packet.prepare(AM::PacketID::ASSET_FILE_BYTES);
     this->packet.write_bytes(
             (void*)&m_current_file_bytes[m_current_file_byteoffset],
-            block_size
-            );
+            block_size);
     this->send_packet();
     
     printf(" -> (block_size=%li) (offset=%li / %li)\n", block_size, m_current_file_byteoffset, m_current_file_size); 
@@ -103,10 +102,22 @@ void AM::TCP_session::m_send_download_queue_next_bytes() {
         m_current_file_complete = true;
 
     }
-
-
 }
 
+
+bool AM::TCP_session::m_match_client_filehash(
+        const json& client_filehashes_json, const AM::AssetFile& file) {
+  
+    if(client_filehashes_json.find(file.name) == client_filehashes_json.end()) {
+        return false;
+    }
+
+    
+    const std::string client_side_filehash = client_filehashes_json[file.name].template get<std::string>();
+
+    return (client_side_filehash == file.sha256_hash);
+
+}
 
 void AM::TCP_session::m_handle_recv_data(size_t size) {
 
@@ -118,30 +129,29 @@ void AM::TCP_session::m_handle_recv_data(size_t size) {
             
             // Respond with files which need downloading.
             try {
-                json client_file_hashes = json::parse(m_data);
-                
-                int file_counter = 0;
-                /*
-                for(const json& j : client_file_hashes) {
-                    
-                    // TODO: Check the hash and if matches add it to download queue.
+                const json client_filehashes = json::parse(m_data);
+               
+                m_download_queue.clear();
 
-                    file_counter++;
-                }*/
+                if(client_filehashes.empty()) {
+                    m_file_storage->foreach_file([this](AM::AssetFile& file) {
+                       m_download_queue.push_back(file);
+                    });
+                }
+                else {
+                    m_file_storage->foreach_file([this, &client_filehashes](AM::AssetFile& file) {
+                        if(!m_match_client_filehash(client_filehashes, file)) {
+                            m_download_queue.push_back(file);
+                        }
+                    });
+                }
 
-                //if(file_counter == 0) {
-                    // Add everything in file storage.
-                    // Client doesnt seem to have any files downloaded.
-                    for(size_t i = 0; i < m_file_storage->texture_files.size(); i++) {
-                        m_download_queue.push_back(m_file_storage->texture_files[i]);
-                    }
-                    for(size_t i = 0; i < m_file_storage->model_files.size(); i++) {
-                        m_download_queue.push_back(m_file_storage->model_files[i]);
-                    }
-                    for(size_t i = 0; i < m_file_storage->audio_files.size(); i++) {
-                        m_download_queue.push_back(m_file_storage->audio_files[i]);
-                    }
-                //}
+                if(m_download_queue.empty()) {
+                    printf("Client files are up to date.\n");
+                    this->packet.prepare(AM::PacketID::ASSET_FILE_END);
+                    this->send_packet();
+                    return;
+                }
 
                 size_t total_download_bytes = 0;
                 json files_json = json::parse("{}");
@@ -154,7 +164,7 @@ void AM::TCP_session::m_handle_recv_data(size_t size) {
                     total_download_bytes += file.size;
                 }
 
-                printf("CLIENT DOWNLOAD QUEUE:\n%s\n", files_json.dump(4).c_str());
+                //printf("CLIENT DOWNLOAD QUEUE:\n%s\n", files_json.dump(4).c_str());
 
                 this->packet.prepare(AM::PacketID::DO_ACCEPT_ASSETS_DOWNLOAD);
                 this->packet.write<size_t>({ total_download_bytes });

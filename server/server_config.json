@@ -3,7 +3,7 @@
     "udp_port": 34485,
 
 
-    "item_list_path": "../items/item_list.json",
+    "item_list_path": "./items/item_list.json",
     "terrain_config_path": "terrain_config.json",
 
     "tick_delay_ms": 50.0,

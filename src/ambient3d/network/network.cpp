@@ -18,7 +18,9 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
             return;
         }
         printf("[CHAT]: %s\n", data);
-        m_msg_recv_callback(255, 255, 255, data);
+        if(m_msg_recv_callback) {
+            m_msg_recv_callback(255, 255, 255, data);
+        }
     });
 
 
@@ -32,7 +34,9 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
             return;
         }
         printf("[SERVER]: %s\n", data);
-        m_msg_recv_callback(255, 200, 50, data);
+        if(m_msg_recv_callback) {
+            m_msg_recv_callback(255, 200, 50, data);
+        }
     });
 
 
@@ -50,15 +54,11 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
 
         // Now send the received player id via UDP
         // so the server can save the endpoint.
-        //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_ID);
-        //AM::packet_write_int(&this->packet, { this->player_id });
         this->packet.prepare(AM::PacketID::PLAYER_ID);
         this->packet.write<int>({ this->player_id });
         this->send_packet(AM::NetProto::UDP);
         
         // Tell server client connected successfully.
-        //AM::packet_prepare(&this->packet, AM::PacketID::PLAYER_CONNECTED);
-        //AM::packet_write_int(&this->packet, { this->player_id });
         this->packet.prepare(AM::PacketID::PLAYER_CONNECTED);
         this->packet.write<int>({ this->player_id });
         this->send_packet(AM::NetProto::TCP); 
@@ -71,7 +71,9 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
     [this](float interval_ms, char* data, size_t sizeb) {
         (void)interval_ms;
         (void)data; (void)sizeb;
-        m_msg_recv_callback(120, 255, 120, "Connected!");
+        if(m_msg_recv_callback) {
+            m_msg_recv_callback(120, 255, 120, "Connected!");
+        }
     });
     
 
@@ -87,8 +89,6 @@ void AM::Network::m_attach_main_TCP_packet_callbacks() {
         
         this->packet.prepare(AM::PacketID::GET_SERVER_CONFIG);
         this->send_packet(AM::NetProto::TCP);
-        //AM::packet_prepare(&this->packet, AM::PacketID::GET_SERVER_CONFIG);
-        //this->send_packet(AM::NetProto::TCP);
     });
     
 

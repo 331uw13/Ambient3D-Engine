@@ -58,12 +58,6 @@ namespace AM {
         };
     }
 
-    enum GuiModuleFocus {
-        GAIN,
-        LOSE,
-        TOGGLE
-    };
-
     namespace StateFlags {
 
         static constexpr int DONT_RENDER_DEFAULT_ITEMINFO = (1 << 0);
@@ -116,30 +110,6 @@ namespace AM {
             Light** add_light(const Light& light);
             void    remove_light(Light** light);
             void    update_lights();
-
-
-            // === GUI MODULES ===
-
-            template<class MODULE>
-            void register_gui_module(
-                    AM::GuiModuleID module_id, // User chosen ID.
-                    AM::GuiModule::RenderOPT render_option
-            ){
-                m_gui_modules.push_back(
-                        std::make_unique<MODULE>(MODULE(module_id, render_option)));
-            }
-
-            template<class MODULE>
-            MODULE* find_gui_module(AM::GuiModuleID module_id) {
-                for(size_t i = 0; i < m_gui_modules.size(); i++) {
-                    if(m_gui_modules[i]->get_id() == module_id) {
-                        return dynamic_cast<MODULE*>(m_gui_modules[i].get());
-                    }
-                }
-                return NULL;
-            }
-
-            void    set_gui_module_focus(int module_id, GuiModuleFocus focus_option);
 
 
             // === NAMED TIMERS ===
@@ -237,7 +207,6 @@ namespace AM {
             
             void                             m_update_player();
 
-            void                             m_update_gui_module_inputs();
             void                             m_create_internal_timers();
 
             // TODO Maybe move this away from State class
@@ -250,8 +219,6 @@ namespace AM {
             std::array<Light*, MAX_LIGHTS> m_light_ptrs { NULL };
             size_t m_num_lights { 0 };
 
-            int64_t                                 m_focused_gui_module_idx { -1 };
-            std::vector<std::unique_ptr<GuiModule>> m_gui_modules;
             std::map<int/*light ID*/, Light>        m_lights_pframe_map; // Previous frame lights.
        
 

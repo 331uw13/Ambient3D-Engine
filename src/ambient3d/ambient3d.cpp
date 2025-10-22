@@ -16,12 +16,10 @@ AM::State::State(
 
     // Initialize network.
 
-    this->register_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX, AM::GuiModule::RenderOPT::ALWAYS);
-    AM::Chatbox* chatbox = this->find_gui_module<AM::Chatbox>(GuiModuleID::CHATBOX);
-
-    network_cfg.msg_recv_callback 
+    /*network_cfg.msg_recv_callback 
         = [chatbox](uint8_t r, uint8_t g, uint8_t b, const std::string& str)
         { chatbox->push_message(r, g, b, str); };
+    */
 
     this->net = new AM::Network(m_asio_io_context, network_cfg);
     this->net->set_engine_state(this);
@@ -572,7 +570,6 @@ void AM::State::frame_begin() {
 
     m_slow_fixed_tick_update();
     m_fast_fixed_tick_update();
-    m_update_gui_module_inputs();
     m_update_player();
     m_update_dropped_items();
 
@@ -622,21 +619,6 @@ void AM::State::frame_end() {
             (Vector2){ 0, 0 }, WHITE);
 
     EndShaderMode();
-
-
-    // Render GuiModules.
-    for(size_t i = 0; i < m_gui_modules.size(); i++) {
-        switch(m_gui_modules[i]->get_render_option()) {
-            case GuiModule::RenderOPT::WHEN_FOCUSED:
-                if(m_gui_modules[i]->has_focus) {
-                    m_gui_modules[i]->module__render(&this->font);
-                }
-                break;
-            case GuiModule::RenderOPT::ALWAYS:
-                m_gui_modules[i]->module__render(&this->font);
-                break;
-        }
-    }
 
     this->draw_info();
 
@@ -733,21 +715,6 @@ void AM::State::m_slow_fixed_tick_update() {
     }
 }
 
-void AM::State::m_update_gui_module_inputs() {
-    if(m_focused_gui_module_idx < 0) {
-        return;
-    }
-
-    auto& module_ = m_gui_modules[m_focused_gui_module_idx];
-    if(!module_->has_focus) {
-        m_focused_gui_module_idx = -1;
-        return;
-    }
-
-    module_->module__char_input(GetCharPressed());
-}
-
-
 /*
 static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool invert) {
     DrawTexturePro(tex,
@@ -760,32 +727,6 @@ static void _draw_tex(const Texture2D& tex, int X, int Y, float scale, bool inve
             (Vector2){ -X, Y }, 0, WHITE);
 }
 */
- 
-void AM::State::set_gui_module_focus(int module_id, AM::GuiModuleFocus focus_option) {
-    m_focused_gui_module_idx = -1;
-
-    for(size_t i = 0; i < m_gui_modules.size(); i++) {
-        
-        if(module_id == m_gui_modules[i]->get_id()) {
-            switch(focus_option) {
-                case GuiModuleFocus::GAIN:
-                    m_gui_modules[i]->has_focus = true;
-                    break;
-                case GuiModuleFocus::LOSE:
-                    m_gui_modules[i]->has_focus = true;
-                    break;
-                case GuiModuleFocus::TOGGLE:
-                    m_gui_modules[i]->has_focus = !m_gui_modules[i]->has_focus;
-                    break;
-            }
-            m_focused_gui_module_idx = i;
-        }
-        else {
-            m_gui_modules[i]->has_focus = false;
-        }
-        
-    }
-}
 
 
 void AM::State::create_named_timer(const std::string_view& timer_name) {

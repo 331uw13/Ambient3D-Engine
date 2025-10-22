@@ -1,7 +1,7 @@
 {
 
     "port": 34470,
-    "host_dir": "../../items",
+    "host_dir": "../items",
     
     "allowed_file_extensions": {
         "models": ".glb|.gltf",
